@@ -1,0 +1,5448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COA.EXE // Neural Architecture Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   CORE DESIGN TOKENS — Cyberpunk Neural Interface
+═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --bg-void: #030810;
+  --bg-deep: #050d18;
+  --bg-surface: #0a1628;
+  --bg-panel: #0d1f35;
+  --bg-elevated: #112540;
+  --bg-glow: #1a3050;
+  
+  --neon-cyan: #00f0ff;
+  --neon-cyan-dim: #00a0aa;
+  --neon-magenta: #ff00ff;
+  --neon-magenta-dim: #aa00aa;
+  --neon-green: #00ff88;
+  --neon-green-dim: #00aa5a;
+  --neon-orange: #ff6b00;
+  --neon-yellow: #ffcc00;
+  --neon-red: #ff3366;
+  
+  --circuit-line: rgba(0, 240, 255, 0.15);
+  --circuit-glow: rgba(0, 240, 255, 0.4);
+  
+  --text-primary: #e8f4ff;
+  --text-secondary: #8ba4c7;
+  --text-dim: #4a6a8a;
+  --text-ghost: #2a4060;
+  
+  --xp-gold: #ffd700;
+  --level-purple: #b366ff;
+  --achievement-orange: #ff9933;
+  
+  --glass-bg: rgba(10, 22, 40, 0.7);
+  --glass-border: rgba(0, 240, 255, 0.2);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  
+  --font-display: 'Orbitron', sans-serif;
+  --font-body: 'Rajdhani', sans-serif;
+  --font-mono: 'Share Tech Mono', monospace;
+  
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-void);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: var(--neon-cyan);
+  color: var(--bg-void);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--neon-cyan), var(--neon-magenta));
+  border-radius: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANIMATED BACKGROUND — Neural Circuit Grid
+═══════════════════════════════════════════════════════════════════════════ */
+#neural-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+#neural-bg canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.neural-overlay {
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0, 240, 255, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(255, 0, 255, 0.05) 0%, transparent 40%),
+    radial-gradient(ellipse 50% 50% at 20% 60%, rgba(0, 255, 136, 0.03) 0%, transparent 40%);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MAIN APPLICATION SHELL
+═══════════════════════════════════════════════════════════════════════════ */
+#app {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.8s var(--ease-smooth);
+}
+
+#app.ready {
+  display: block;
+  opacity: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LANDING SCREEN — Cinematic Boot Sequence
+═══════════════════════════════════════════════════════════════════════════ */
+#landing-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--bg-void);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 1s var(--ease-smooth), transform 1s var(--ease-smooth);
+}
+
+#landing-screen.hidden {
+  opacity: 0;
+  transform: scale(1.1);
+  pointer-events: none;
+}
+
+.boot-container {
+  text-align: center;
+  max-width: 800px;
+  padding: 40px;
+}
+
+.boot-logo {
+  margin-bottom: 60px;
+  position: relative;
+}
+
+.boot-logo svg {
+  width: 200px;
+  height: 200px;
+  filter: drop-shadow(0 0 30px var(--neon-cyan));
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { filter: drop-shadow(0 0 30px var(--neon-cyan)); }
+  50% { filter: drop-shadow(0 0 60px var(--neon-cyan)) drop-shadow(0 0 100px var(--neon-magenta)); }
+}
+
+.boot-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta), var(--neon-cyan));
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shift 4s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.boot-subtitle {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-bottom: 50px;
+}
+
+.boot-progress {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto 40px;
+}
+
+.boot-progress-bar {
+  height: 4px;
+  background: var(--bg-panel);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 15px;
+}
+
+.boot-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta));
+  border-radius: 2px;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 20px var(--neon-cyan);
+}
+
+.boot-log {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--neon-green);
+  text-align: left;
+  max-width: 500px;
+  margin: 0 auto;
+  height: 120px;
+  overflow: hidden;
+}
+
+.boot-log-line {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.boot-log-line.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.boot-log-line::before {
+  content: '>';
+  margin-right: 10px;
+  color: var(--neon-cyan);
+}
+
+.boot-enter-btn {
+  margin-top: 40px;
+  padding: 18px 60px;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--bg-void);
+  background: linear-gradient(135deg, var(--neon-cyan), var(--neon-green));
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.4s var(--ease-spring);
+  text-transform: uppercase;
+  box-shadow: 
+    0 0 30px rgba(0, 240, 255, 0.4),
+    inset 0 0 20px rgba(255, 255, 255, 0.2);
+}
+
+.boot-enter-btn.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.boot-enter-btn:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 
+    0 0 50px rgba(0, 240, 255, 0.6),
+    0 10px 40px rgba(0, 0, 0, 0.4),
+    inset 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.boot-enter-btn:active {
+  transform: scale(0.98);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOP BAR — HUD STYLE
+═══════════════════════════════════════════════════════════════════════════ */
+#hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  height: 70px;
+  background: linear-gradient(180deg, rgba(5, 13, 24, 0.95) 0%, rgba(5, 13, 24, 0.8) 100%);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  padding: 0 30px;
+  gap: 30px;
+}
+
+.hud-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.hud-logo svg {
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 0 10px var(--neon-cyan));
+}
+
+.hud-logo-text {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hud-stats {
+  display: flex;
+  gap: 25px;
+  margin-left: auto;
+}
+
+.hud-stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.hud-stat:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+}
+
+.hud-stat-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.hud-stat-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.hud-stat-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.hud-stat-value {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.hud-stat.xp .hud-stat-value { color: var(--xp-gold); }
+.hud-stat.level .hud-stat-value { color: var(--level-purple); }
+.hud-stat.streak .hud-stat-value { color: var(--neon-orange); }
+
+.hud-nav {
+  display: flex;
+  gap: 8px;
+}
+
+.hud-nav-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.hud-nav-btn:hover {
+  background: var(--bg-elevated);
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(0, 240, 255, 0.2);
+}
+
+.hud-nav-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MAIN CONTENT AREA
+═══════════════════════════════════════════════════════════════════════════ */
+#main-content {
+  padding-top: 90px;
+  padding-bottom: 40px;
+  min-height: 100vh;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   WORLD MAP — Interactive Node Graph
+═══════════════════════════════════════════════════════════════════════════ */
+#world-map {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 30px;
+}
+
+.world-map-header {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.world-map-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  margin-bottom: 15px;
+  background: linear-gradient(135deg, var(--neon-cyan), var(--neon-green));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.world-map-subtitle {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.15em;
+}
+
+.world-map-container {
+  position: relative;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 40px;
+  backdrop-filter: blur(20px);
+  overflow: hidden;
+  min-height: 600px;
+}
+
+.world-map-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.world-nodes {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 30px;
+  padding: 20px;
+}
+
+.world-node {
+  position: relative;
+  background: var(--bg-panel);
+  border: 2px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 25px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.4s var(--ease-spring);
+  overflow: hidden;
+}
+
+.world-node::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s var(--ease-spring);
+}
+
+.world-node:hover::before,
+.world-node.active::before {
+  transform: scaleX(1);
+}
+
+.world-node:hover,
+.world-node.active {
+  transform: translateY(-8px);
+  border-color: var(--neon-cyan);
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(0, 240, 255, 0.2);
+}
+
+.world-node.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.world-node.locked:hover {
+  transform: none;
+  border-color: var(--glass-border);
+  box-shadow: none;
+}
+
+.world-node-icon {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 15px;
+  background: var(--bg-elevated);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  transition: all 0.3s ease;
+}
+
+.world-node:hover .world-node-icon {
+  transform: scale(1.1);
+  box-shadow: 0 0 30px var(--neon-cyan);
+}
+
+.world-node-title {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.world-node-desc {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.world-node-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.world-node-progress-bar {
+  width: 60px;
+  height: 6px;
+  background: var(--bg-void);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.world-node-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--neon-cyan), var(--neon-green));
+  border-radius: 3px;
+  transition: width 0.5s var(--ease-smooth);
+}
+
+.world-node-stars {
+  display: flex;
+  gap: 3px;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.world-node-star {
+  width: 16px;
+  height: 16px;
+  opacity: 0.3;
+  transition: all 0.3s ease;
+}
+
+.world-node-star.earned {
+  opacity: 1;
+  filter: drop-shadow(0 0 5px var(--xp-gold));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MISSION PANEL — Slide-in from right
+═══════════════════════════════════════════════════════════════════════════ */
+#mission-panel {
+  position: fixed;
+  top: 70px;
+  right: -450px;
+  width: 420px;
+  max-height: calc(100vh - 90px);
+  background: var(--bg-surface);
+  border-left: 1px solid var(--glass-border);
+  border-radius: 20px 0 0 20px;
+  z-index: 90;
+  transition: right 0.5s var(--ease-spring);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#mission-panel.open {
+  right: 0;
+}
+
+.mission-panel-header {
+  padding: 25px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mission-panel-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--neon-cyan);
+}
+
+.mission-panel-close {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mission-panel-close:hover {
+  border-color: var(--neon-red);
+  color: var(--neon-red);
+}
+
+.mission-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.mission-item {
+  background: var(--bg-panel);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 15px;
+  transition: all 0.3s ease;
+}
+
+.mission-item:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.1);
+}
+
+.mission-item.completed {
+  border-color: var(--neon-green);
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), transparent);
+}
+
+.mission-item-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mission-item-icon {
+  width: 40px;
+  height: 40px;
+  background: var(--bg-elevated);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.mission-item-info {
+  flex: 1;
+}
+
+.mission-item-title {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.mission-item-desc {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+.mission-item-reward {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--xp-gold);
+}
+
+.mission-progress {
+  height: 4px;
+  background: var(--bg-void);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.mission-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--neon-cyan), var(--neon-green));
+  transition: width 0.5s var(--ease-smooth);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GAME SCREENS — Each chapter becomes an interactive game
+═══════════════════════════════════════════════════════════════════════════ */
+.game-screen {
+  display: none;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 30px;
+  animation: fadeIn 0.5s ease;
+}
+
+.game-screen.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.game-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 40px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.game-title-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.game-back-btn {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.game-back-btn:hover {
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+  transform: translateX(-5px);
+}
+
+.game-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+
+.game-subtitle {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.1em;
+}
+
+.game-objectives {
+  display: flex;
+  gap: 20px;
+}
+
+.game-objective {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+}
+
+.game-objective-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.game-objective-value {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--xp-gold);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CPU REPAIR GAME — Interactive CPU anatomy explorer
+═══════════════════════════════════════════════════════════════════════════ */
+.cpu-game-container {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 30px;
+}
+
+.cpu-visualization {
+  position: relative;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 30px;
+  aspect-ratio: 16/10;
+  overflow: hidden;
+}
+
+.cpu-visualization canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.cpu-legend {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 15px;
+  backdrop-filter: blur(10px);
+}
+
+.cpu-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.cpu-legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+.cpu-controls-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cpu-info-panel {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 25px;
+  backdrop-filter: blur(10px);
+}
+
+.cpu-info-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--neon-cyan);
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.cpu-info-content {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.cpu-info-content b {
+  color: var(--neon-green);
+}
+
+.cpu-component-list {
+  margin-top: 20px;
+}
+
+.cpu-component-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cpu-component-item:hover,
+.cpu-component-item.selected {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+}
+
+.cpu-component-item.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cpu-component-icon {
+  width: 36px;
+  height: 36px;
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cpu-component-info {
+  flex: 1;
+}
+
+.cpu-component-name {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.cpu-component-status {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+.cpu-component-status.operational { color: var(--neon-green); }
+.cpu-component-status.damaged { color: var(--neon-red); }
+
+.cpu-xp-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.05));
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 12px;
+}
+
+.cpu-xp-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--xp-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.cpu-xp-value {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--xp-gold);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BUS ROUTING GAME — Signal path puzzle
+═══════════════════════════════════════════════════════════════════════════ */
+.bus-game-container {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 30px;
+}
+
+.bus-simulation-area {
+  position: relative;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 30px;
+  aspect-ratio: 16/9;
+  overflow: hidden;
+}
+
+.bus-node {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  background: var(--bg-panel);
+  border: 2px solid var(--glass-border);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.bus-node:hover {
+  transform: scale(1.05);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.3);
+}
+
+.bus-node.connected {
+  border-color: var(--neon-green);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+}
+
+.bus-node.selected {
+  border-color: var(--neon-magenta);
+  box-shadow: 0 0 30px rgba(255, 0, 255, 0.4);
+  transform: scale(1.1);
+}
+
+.bus-node-icon {
+  font-size: 1.5rem;
+  margin-bottom: 5px;
+}
+
+.bus-node-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.bus-connection-line {
+  position: absolute;
+  height: 3px;
+  background: var(--neon-cyan);
+  transform-origin: left center;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.bus-connection-line.active {
+  opacity: 1;
+  box-shadow: 0 0 10px var(--neon-cyan);
+}
+
+.bus-signal-particle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: var(--neon-cyan);
+  border-radius: 50%;
+  box-shadow: 0 0 20px var(--neon-cyan), 0 0 40px var(--neon-cyan);
+  z-index: 20;
+  pointer-events: none;
+}
+
+.bus-stats-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.bus-metric-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.bus-metric-title {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 10px;
+}
+
+.bus-metric-value {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--neon-cyan);
+  margin-bottom: 5px;
+}
+
+.bus-metric-bar {
+  height: 6px;
+  background: var(--bg-void);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.bus-metric-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s var(--ease-smooth);
+}
+
+.bus-metric-fill.good { background: var(--neon-green); }
+.bus-metric-fill.medium { background: var(--neon-yellow); }
+.bus-metric-fill.bad { background: var(--neon-red); }
+
+.bus-instruction-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.bus-instruction-title {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--neon-cyan);
+  margin-bottom: 12px;
+}
+
+.bus-instruction-text {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MEMORY CITY — Memory hierarchy explorer
+═══════════════════════════════════════════════════════════════════════════ */
+.memory-game-container {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 30px;
+}
+
+.memory-city-view {
+  position: relative;
+  background: linear-gradient(180deg, var(--bg-void) 0%, var(--bg-deep) 100%);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  overflow: hidden;
+  min-height: 500px;
+}
+
+.memory-sky {
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse 100% 50% at 50% 0%, rgba(0, 240, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 40% at 30% 20%, rgba(255, 0, 255, 0.05) 0%, transparent 40%);
+}
+
+.memory-buildings {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 15px;
+  padding: 20px 40px;
+}
+
+.memory-building {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.4s var(--ease-spring);
+}
+
+.memory-building:hover {
+  transform: translateY(-10px);
+}
+
+.memory-building:hover .memory-building-body {
+  box-shadow: 0 0 40px var(--building-color);
+}
+
+.memory-building-body {
+  background: var(--building-color);
+  border-radius: 8px 8px 4px 4px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.memory-building-windows {
+  position: absolute;
+  inset: 5px;
+  display: grid;
+  gap: 4px;
+}
+
+.memory-building-window {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 2px;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.memory-building-label {
+  margin-top: 10px;
+  padding: 8px 16px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  text-align: center;
+}
+
+.memory-building-name {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
+
+.memory-building-speed {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+}
+
+.memory-connection-path {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  pointer-events: none;
+}
+
+.memory-data-packet {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: var(--neon-cyan);
+  border-radius: 50%;
+  box-shadow: 0 0 30px var(--neon-cyan);
+  z-index: 30;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--bg-void);
+  font-weight: bold;
+}
+
+.memory-hierarchy-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.memory-detail-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.memory-detail-card.active {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
+}
+
+.memory-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.memory-detail-icon {
+  width: 50px;
+  height: 50px;
+  background: var(--bg-elevated);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.memory-detail-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.memory-detail-subtitle {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+.memory-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.memory-stat {
+  background: var(--bg-panel);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.memory-stat-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 5px;
+}
+
+.memory-stat-value {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--neon-cyan);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FLOATING POINT EXPLORER — IEEE 754 interactive
+═══════════════════════════════════════════════════════════════════════════ */
+.float-game-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+}
+
+.float-bit-editor {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 30px;
+  backdrop-filter: blur(10px);
+}
+
+.float-bit-section {
+  margin-bottom: 25px;
+}
+
+.float-bit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.float-bit-label {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.float-bit-info {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.float-bits-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.float-bit {
+  width: 36px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-panel);
+  border: 2px solid var(--glass-border);
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.float-bit:hover {
+  border-color: var(--neon-cyan);
+  transform: translateY(-2px);
+}
+
+.float-bit.active {
+  background: var(--neon-cyan);
+  color: var(--bg-void);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+}
+
+.float-bit.zero { color: var(--text-dim); }
+.float-bit.one { color: var(--neon-cyan); }
+
+.float-result-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.float-visualization {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 30px;
+  backdrop-filter: blur(10px);
+  text-align: center;
+}
+
+.float-number-display {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-weight: 900;
+  margin-bottom: 20px;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.float-number-display.positive { color: var(--neon-cyan); }
+.float-number-display.negative { color: var(--neon-red); }
+.float-number-display.special { 
+  font-size: 1.5rem;
+  color: var(--neon-magenta);
+}
+
+.float-hex-display {
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  padding: 15px;
+  background: var(--bg-panel);
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.float-components-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.float-component-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.float-component-row:last-child {
+  border-bottom: none;
+}
+
+.float-component-name {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.float-component-value {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--neon-green);
+  font-weight: 600;
+}
+
+.float-special-values {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.float-special-btn {
+  padding: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.float-special-btn:hover {
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+}
+
+.float-special-btn.active {
+  background: var(--neon-cyan);
+  color: var(--bg-void);
+  border-color: var(--neon-cyan);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ALU CIRCUIT BUILDER — Logic gate playground
+═══════════════════════════════════════════════════════════════════════════ */
+.alu-game-container {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 30px;
+}
+
+.alu-circuit-canvas {
+  position: relative;
+  background: var(--bg-void);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  overflow: hidden;
+  min-height: 500px;
+}
+
+.alu-circuit-grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(var(--glass-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--glass-border) 1px, transparent 1px);
+  background-size: 30px 30px;
+  opacity: 0.3;
+}
+
+.alu-circuit-area {
+  position: absolute;
+  inset: 0;
+}
+
+.alu-component {
+  position: absolute;
+  background: var(--bg-panel);
+  border: 2px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 15px 20px;
+  cursor: move;
+  transition: all 0.2s ease;
+  user-select: none;
+  z-index: 10;
+}
+
+.alu-component:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+  z-index: 20;
+}
+
+.alu-component.selected {
+  border-color: var(--neon-magenta);
+  box-shadow: 0 0 30px rgba(255, 0, 255, 0.4);
+}
+
+.alu-component-name {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--neon-cyan);
+  text-align: center;
+  margin-bottom: 5px;
+}
+
+.alu-component-pins {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.alu-pin {
+  width: 12px;
+  height: 12px;
+  background: var(--bg-elevated);
+  border: 2px solid var(--glass-border);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.alu-pin:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 10px var(--neon-cyan);
+}
+
+.alu-pin.active {
+  background: var(--neon-green);
+  border-color: var(--neon-green);
+  box-shadow: 0 0 10px var(--neon-green);
+}
+
+.alu-wire {
+  position: absolute;
+  height: 3px;
+  background: var(--neon-cyan);
+  transform-origin: left center;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.alu-wire.active {
+  box-shadow: 0 0 10px var(--neon-cyan);
+  animation: wire-pulse 0.5s ease infinite;
+}
+
+@keyframes wire-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.alu-electron {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--neon-yellow);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--neon-yellow);
+  z-index: 15;
+  pointer-events: none;
+}
+
+.alu-toolbox {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.alu-tool-section {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.alu-tool-title {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--neon-cyan);
+  margin-bottom: 15px;
+  letter-spacing: 0.1em;
+}
+
+.alu-tool-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.alu-tool-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 15px 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  cursor: grab;
+  transition: all 0.3s ease;
+}
+
+.alu-tool-item:hover {
+  border-color: var(--neon-cyan);
+  transform: translateY(-3px);
+  box-shadow: 0 5px 20px rgba(0, 240, 255, 0.2);
+}
+
+.alu-tool-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.alu-tool-name {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.alu-truth-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.alu-truth-table th,
+.alu-truth-table td {
+  padding: 8px 12px;
+  text-align: center;
+  border: 1px solid var(--glass-border);
+}
+
+.alu-truth-table th {
+  background: var(--bg-elevated);
+  color: var(--neon-cyan);
+  font-weight: 600;
+}
+
+.alu-truth-table td {
+  color: var(--text-secondary);
+}
+
+.alu-truth-table td.output {
+  color: var(--neon-green);
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BOOTH MULTIPLICATION VISUALIZER
+═══════════════════════════════════════════════════════════════════════════ */
+.booth-game-container {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.booth-controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.booth-input-group {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.booth-input-field {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.booth-input-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.booth-input {
+  width: 100px;
+  padding: 12px 15px;
+  background: var(--bg-panel);
+  border: 2px solid var(--glass-border);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.booth-input:focus {
+  outline: none;
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+}
+
+.booth-input-binary {
+  font-size: 0.8rem;
+  color: var(--neon-cyan);
+  min-height: 1.2em;
+}
+
+.booth-action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.booth-btn {
+  padding: 12px 24px;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+}
+
+.booth-btn.primary {
+  background: linear-gradient(135deg, var(--neon-cyan), var(--neon-green));
+  color: var(--bg-void);
+}
+
+.booth-btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(0, 240, 255, 0.4);
+}
+
+.booth-btn.secondary {
+  background: var(--bg-panel);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+}
+
+.booth-btn.secondary:hover {
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+}
+
+.booth-step-counter {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+.booth-step-counter span {
+  color: var(--neon-cyan);
+  font-weight: 700;
+}
+
+.booth-simulation-area {
+  position: relative;
+  background: var(--bg-void);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 30px;
+  overflow: hidden;
+}
+
+.booth-registers {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-bottom: 40px;
+}
+
+.booth-register {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.booth-register-label {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.booth-register-bits {
+  display: flex;
+  gap: 3px;
+}
+
+.booth-bit {
+  width: 50px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-panel);
+  border: 2px solid var(--glass-border);
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+}
+
+.booth-bit.highlight-add {
+  background: rgba(0, 255, 136, 0.2);
+  border-color: var(--neon-green);
+  color: var(--neon-green);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+}
+
+.booth-bit.highlight-sub {
+  background: rgba(255, 51, 102, 0.2);
+  border-color: var(--neon-red);
+  color: var(--neon-red);
+  box-shadow: 0 0 20px rgba(255, 51, 102, 0.3);
+}
+
+.booth-bit.highlight-shift {
+  background: rgba(0, 240, 255, 0.2);
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+}
+
+.booth-extra-bit {
+  width: 40px;
+  height: 50px;
+  font-size: 1rem;
+}
+
+.booth-sc-indicator {
+  position: absolute;
+  top: 20px;
+  right: 30px;
+  padding: 10px 20px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.booth-sc-indicator span {
+  color: var(--neon-cyan);
+  font-weight: 700;
+}
+
+.booth-animation-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.booth-add-arrow,
+.booth-shift-arrow {
+  position: absolute;
+  width: 4px;
+  background: var(--neon-green);
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.booth-add-arrow.active,
+.booth-shift-arrow.active {
+  opacity: 1;
+  animation: arrow-flow 0.5s ease infinite;
+}
+
+@keyframes arrow-flow {
+  0%, 100% { box-shadow: 0 0 10px var(--neon-green); }
+  50% { box-shadow: 0 0 25px var(--neon-green); }
+}
+
+.booth-log-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 20px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.booth-log-title {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--neon-cyan);
+  margin-bottom: 15px;
+}
+
+.booth-log-entry {
+  display: flex;
+  gap: 15px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--glass-border);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  animation: log-appear 0.3s ease;
+}
+
+@keyframes log-appear {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.booth-log-step {
+  color: var(--text-dim);
+  min-width: 50px;
+}
+
+.booth-log-action {
+  color: var(--neon-green);
+  flex: 1;
+}
+
+.booth-log-action.subtract {
+  color: var(--neon-red);
+}
+
+.booth-log-action.shift {
+  color: var(--neon-cyan);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FETCH-EXECUTE CYCLE ANIMATOR
+═══════════════════════════════════════════════════════════════════════════ */
+.fetch-game-container {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 30px;
+}
+
+.fetch-simulation {
+  position: relative;
+  background: linear-gradient(180deg, var(--bg-void) 0%, var(--bg-deep) 50%, var(--bg-void) 100%);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 40px;
+  overflow: hidden;
+  min-height: 550px;
+}
+
+.fetch-component {
+  position: absolute;
+  background: var(--bg-panel);
+  border: 2px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 15px;
+  transition: all 0.4s var(--ease-spring);
+  z-index: 10;
+}
+
+.fetch-component.active {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 40px rgba(0, 240, 255, 0.4);
+  transform: scale(1.05);
+}
+
+.fetch-component-label {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: 5px;
+}
+
+.fetch-component-sublabel {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.fetch-bus-line {
+  position: absolute;
+  height: 4px;
+  background: var(--glass-border);
+  z-index: 5;
+  transition: all 0.3s ease;
+}
+
+.fetch-bus-line.active {
+  background: var(--neon-cyan);
+  box-shadow: 0 0 15px var(--neon-cyan);
+}
+
+.fetch-data-packet {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  background: var(--neon-cyan);
+  border-radius: 50%;
+  box-shadow: 0 0 30px var(--neon-cyan), 0 0 60px var(--neon-cyan);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: var(--bg-void);
+  pointer-events: none;
+}
+
+.fetch-clock-pulse {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+}
+
+.fetch-clock-wave {
+  width: 60px;
+  height: 20px;
+}
+
+.fetch-clock-text {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.fetch-cycle-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.fetch-stage-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.fetch-stage-card:hover {
+  border-color: var(--neon-cyan);
+  transform: translateX(5px);
+}
+
+.fetch-stage-card.active {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.1), transparent);
+}
+
+.fetch-stage-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.fetch-stage-number {
+  width: 30px;
+  height: 30px;
+  background: var(--bg-elevated);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--neon-cyan);
+}
+
+.fetch-stage-card.active .fetch-stage-number {
+  background: var(--neon-cyan);
+  color: var(--bg-void);
+}
+
+.fetch-stage-title {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.fetch-stage-desc {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.fetch-controls-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.fetch-controls-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.fetch-control-btn {
+  padding: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.fetch-control-btn:hover {
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+}
+
+.fetch-control-btn.active {
+  background: var(--neon-cyan);
+  color: var(--bg-void);
+  border-color: var(--neon-cyan);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INSTRUCTION SET CARD GAME
+═══════════════════════════════════════════════════════════════════════════ */
+.instr-game-container {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 30px;
+}
+
+.instr-workspace {
+  position: relative;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 30px;
+  min-height: 500px;
+}
+
+.instr-drop-zone {
+  position: absolute;
+  inset: 30px;
+  border: 2px dashed var(--glass-border);
+  border-radius: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  padding: 20px;
+  align-content: flex-start;
+  transition: all 0.3s ease;
+}
+
+.instr-drop-zone.drag-over {
+  border-color: var(--neon-cyan);
+  background: rgba(0, 240, 255, 0.05);
+}
+
+.instr-card {
+  width: 140px;
+  background: var(--bg-panel);
+  border: 2px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 15px;
+  cursor: grab;
+  transition: all 0.3s ease;
+  user-select: none;
+}
+
+.instr-card:hover {
+  transform: translateY(-5px) rotate(-2deg);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.instr-card.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.instr-card.mnemonic {
+  border-color: var(--neon-cyan);
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.1), transparent);
+}
+
+.instr-card.operand {
+  border-color: var(--neon-magenta);
+  background: linear-gradient(135deg, rgba(255, 0, 255, 0.1), transparent);
+}
+
+.instr-card-hex {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.instr-card-mnemonic {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 5px;
+}
+
+.instr-card-desc {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+.instr-palette {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.instr-palette-section {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.instr-palette-title {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--neon-cyan);
+  margin-bottom: 15px;
+  letter-spacing: 0.1em;
+}
+
+.instr-palette-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.instr-mini-card {
+  padding: 8px 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  cursor: grab;
+  transition: all 0.2s ease;
+}
+
+.instr-mini-card:hover {
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+}
+
+.instr-execute-btn {
+  width: 100%;
+  padding: 18px;
+  background: linear-gradient(135deg, var(--neon-cyan), var(--neon-green));
+  border: none;
+  border-radius: 12px;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--bg-void);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.instr-execute-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(0, 240, 255, 0.4);
+}
+
+.instr-execute-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.instr-register-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.instr-register {
+  flex: 1;
+  min-width: 80px;
+  padding: 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.instr-reg-name {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-bottom: 5px;
+}
+
+.instr-reg-value {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  color: var(--neon-green);
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ACHIEVEMENTS & NOTIFICATIONS
+═══════════════════════════════════════════════════════════════════════════ */
+#achievement-popup {
+  position: fixed;
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100px);
+  background: linear-gradient(135deg, var(--bg-panel), var(--bg-surface));
+  border: 2px solid var(--xp-gold);
+  border-radius: 16px;
+  padding: 20px 30px;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 10px 50px rgba(255, 215, 0, 0.3);
+  opacity: 0;
+  transition: all 0.5s var(--ease-spring);
+  pointer-events: none;
+}
+
+#achievement-popup.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.achievement-icon {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, var(--xp-gold), var(--achievement-orange));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+}
+
+.achievement-info {
+  flex: 1;
+}
+
+.achievement-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--xp-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 5px;
+}
+
+.achievement-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
+
+.achievement-desc {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+#notification-stack {
+  position: fixed;
+  top: 100px;
+  right: 30px;
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.notification {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 15px 20px;
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: notify-in 0.4s var(--ease-spring), notify-out 0.4s ease 2.6s forwards;
+  max-width: 300px;
+}
+
+@keyframes notify-in {
+  from { opacity: 0; transform: translateX(50px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes notify-out {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(50px); }
+}
+
+.notification-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.notification-icon.success { background: rgba(0, 255, 136, 0.2); color: var(--neon-green); }
+.notification-icon.info { background: rgba(0, 240, 255, 0.2); color: var(--neon-cyan); }
+.notification-icon.warning { background: rgba(255, 204, 0, 0.2); color: var(--neon-yellow); }
+.notification-icon.xp { background: rgba(255, 215, 0, 0.2); color: var(--xp-gold); }
+
+.notification-text {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-primary);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SKILL TREE OVERLAY
+═══════════════════════════════════════════════════════════════════════════ */
+#skill-tree-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 8, 16, 0.95);
+  z-index: 200;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  overflow-y: auto;
+}
+
+#skill-tree-overlay.open {
+  display: block;
+  opacity: 1;
+}
+
+.skill-tree-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 60px 30px;
+}
+
+.skill-tree-header {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.skill-tree-title {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  margin-bottom: 15px;
+  background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.skill-tree-subtitle {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.15em;
+}
+
+.skill-tree-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 30px;
+}
+
+.skill-node {
+  position: relative;
+  background: var(--glass-bg);
+  border: 2px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 30px;
+  transition: all 0.4s var(--ease-spring);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.skill-node::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s var(--ease-spring);
+}
+
+.skill-node:hover::before,
+.skill-node.unlocked::before {
+  transform: scaleX(1);
+}
+
+.skill-node:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+.skill-node.unlocked {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
+}
+
+.skill-node.locked {
+  opacity: 0.5;
+}
+
+.skill-node-icon {
+  width: 70px;
+  height: 70px;
+  background: var(--bg-elevated);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+}
+
+.skill-node:hover .skill-node-icon {
+  transform: scale(1.1);
+  box-shadow: 0 0 30px var(--neon-cyan);
+}
+
+.skill-node.unlocked .skill-node-icon {
+  background: linear-gradient(135deg, var(--neon-cyan), var(--neon-green));
+  color: var(--bg-void);
+}
+
+.skill-node-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.skill-node-desc {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 15px;
+}
+
+.skill-node-xp {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 20px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--xp-gold);
+}
+
+.skill-node-prereq {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  padding: 5px 10px;
+  background: var(--bg-elevated);
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE DESIGN
+═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 1200px) {
+  .cpu-game-container,
+  .bus-game-container,
+  .memory-game-container,
+  .float-game-container,
+  .alu-game-container,
+  .fetch-game-container,
+  .instr-game-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .world-nodes {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .world-nodes {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .hud-stats {
+    display: none;
+  }
+  
+  .game-header {
+    flex-direction: column;
+    gap: 20px;
+    align-items: flex-start;
+  }
+  
+  .game-objectives {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 600px) {
+  .world-nodes {
+    grid-template-columns: 1fr;
+  }
+  
+  #hud {
+    padding: 0 15px;
+    gap: 15px;
+  }
+  
+  .hud-logo-text {
+    display: none;
+  }
+  
+  .boot-logo svg {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .boot-title {
+    font-size: 2rem;
+  }
+  
+  #mission-panel {
+    width: 100%;
+    right: -100%;
+    border-radius: 20px 20px 0 0;
+    top: auto;
+    bottom: 0;
+    max-height: 70vh;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ACCESSIBILITY
+═══════════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--neon-cyan);
+  outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   UTILITY CLASSES
+═══════════════════════════════════════════════════════════════════════════ */
+.hidden { display: none !important; }
+.glass { 
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+}
+.glow-cyan { box-shadow: 0 0 30px rgba(0, 240, 255, 0.3); }
+.glow-green { box-shadow: 0 0 30px rgba(0, 255, 136, 0.3); }
+.glow-magenta { box-shadow: 0 0 30px rgba(255, 0, 255, 0.3); }
+.glow-gold { box-shadow: 0 0 30px rgba(255, 215, 0, 0.3); }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     NEURAL BACKGROUND — Particle System
+═══════════════════════════════════════════════════════════════════════════ -->
+<div id="neural-bg">
+  <canvas id="bg-canvas"></canvas>
+  <div class="neural-overlay"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     LANDING SCREEN — Boot Sequence
+═══════════════════════════════════════════════════════════════════════════ -->
+<div id="landing-screen">
+  <div class="boot-container">
+    <div class="boot-logo">
+      <svg viewBox="0 0 200 200" fill="none">
+        <defs>
+          <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#00f0ff"/>
+            <stop offset="50%" style="stop-color:#ff00ff"/>
+            <stop offset="100%" style="stop-color:#00f0ff"/>
+          </linearGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+        <circle cx="100" cy="100" r="80" stroke="url(#logoGrad)" stroke-width="3" fill="none" filter="url(#glow)"/>
+        <circle cx="100" cy="100" r="60" stroke="url(#logoGrad)" stroke-width="2" fill="none" opacity="0.7"/>
+        <circle cx="100" cy="100" r="40" stroke="url(#logoGrad)" stroke-width="2" fill="none" opacity="0.5"/>
+        <path d="M100 20 L100 40 M100 160 L100 180 M20 100 L40 100 M160 100 L180 100" stroke="url(#logoGrad)" stroke-width="3" filter="url(#glow)"/>
+        <path d="M45 45 L60 60 M140 140 L155 155 M155 45 L140 60 M45 155 L60 140" stroke="url(#logoGrad)" stroke-width="2" opacity="0.7"/>
+        <circle cx="100" cy="100" r="15" fill="url(#logoGrad)" filter="url(#glow)"/>
+        <text x="100" y="108" text-anchor="middle" fill="#030810" font-family="Orbitron" font-size="12" font-weight="bold">COA</text>
+      </svg>
+    </div>
+    
+    <h1 class="boot-title">COA.EXE</h1>
+    <p class="boot-subtitle">Neural Architecture Engine</p>
+    
+    <div class="boot-progress">
+      <div class="boot-progress-bar">
+        <div class="boot-progress-fill" id="boot-progress-fill"></div>
+      </div>
+      <div class="boot-log" id="boot-log"></div>
+    </div>
+    
+    <button class="boot-enter-btn" id="boot-enter-btn">Initialize System</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     MAIN APPLICATION
+═══════════════════════════════════════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- HUD Top Bar -->
+  <header id="hud">
+    <a href="#" class="hud-logo" onclick="showWorldMap()">
+      <svg viewBox="0 0 40 40" fill="none">
+        <circle cx="20" cy="20" r="18" stroke="#00f0ff" stroke-width="2"/>
+        <circle cx="20" cy="20" r="12" stroke="#ff00ff" stroke-width="1.5" opacity="0.7"/>
+        <circle cx="20" cy="20" r="6" stroke="#00f0ff" stroke-width="1" opacity="0.5"/>
+        <circle cx="20" cy="20" r="3" fill="#00f0ff"/>
+      </svg>
+      <span class="hud-logo-text">COA.EXE</span>
+    </a>
+    
+    <div class="hud-stats">
+      <div class="hud-stat xp">
+        <svg class="hud-stat-icon" viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+        <div class="hud-stat-content">
+          <span class="hud-stat-label">Experience</span>
+          <span class="hud-stat-value" id="hud-xp">0</span>
+        </div>
+      </div>
+      
+      <div class="hud-stat level">
+        <svg class="hud-stat-icon" viewBox="0 0 24 24" fill="none" stroke="#b366ff" stroke-width="2">
+          <path d="M12 15l-2 5-5-3 2-5"/>
+          <path d="M12 15l2 5 5-3-2-5"/>
+          <circle cx="12" cy="9" r="6"/>
+        </svg>
+        <div class="hud-stat-content">
+          <span class="hud-stat-label">Level</span>
+          <span class="hud-stat-value" id="hud-level">1</span>
+        </div>
+      </div>
+      
+      <div class="hud-stat streak">
+        <svg class="hud-stat-icon" viewBox="0 0 24 24" fill="none" stroke="#ff6b00" stroke-width="2">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+        <div class="hud-stat-content">
+          <span class="hud-stat-label">Streak</span>
+          <span class="hud-stat-value" id="hud-streak">0</span>
+        </div>
+      </div>
+    </div>
+    
+    <nav class="hud-nav">
+      <button class="hud-nav-btn" onclick="toggleSkillTree()" aria-label="Skill Tree">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="5" r="3"/>
+          <circle cx="5" cy="19" r="3"/>
+          <circle cx="19" cy="19" r="3"/>
+          <path d="M12 8v4M9 14l3 5 3-5"/>
+        </svg>
+      </button>
+      <button class="hud-nav-btn" onclick="toggleMissionPanel()" aria-label="Missions">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+        </svg>
+      </button>
+      <button class="hud-nav-btn" onclick="toggleSound()" aria-label="Sound" id="sound-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        </svg>
+      </button>
+    </nav>
+  </header>
+
+  <!-- Main Content -->
+  <main id="main-content">
+    
+    <!-- World Map Screen -->
+    <section id="world-map" class="screen active">
+      <div class="world-map-header">
+        <h1 class="world-map-title">Neural Architecture Map</h1>
+        <p class="world-map-subtitle">Select a module to begin your journey through computer organization</p>
+      </div>
+      
+      <div class="world-map-container">
+        <canvas class="world-map-canvas" id="world-map-canvas"></canvas>
+        <div class="world-nodes" id="world-nodes">
+          <!-- Nodes will be generated by JavaScript -->
+        </div>
+      </div>
+    </section>
+
+    <!-- CPU Game Screen -->
+    <section id="cpu-game" class="game-screen">
+      <div class="game-header">
+        <div class="game-title-section">
+          <button class="game-back-btn" onclick="showWorldMap()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <div>
+            <h1 class="game-title">CPU REPAIR STATION</h1>
+            <p class="game-subtitle">Explore the Central Processing Unit architecture</p>
+          </div>
+        </div>
+        <div class="game-objectives">
+          <div class="game-objective">
+            <span class="game-objective-label">XP Reward</span>
+            <span class="game-objective-value" id="cpu-xp-reward">+500</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="cpu-game-container">
+        <div class="cpu-visualization">
+          <canvas id="cpu-canvas" width="800" height="500"></canvas>
+          <div class="cpu-legend">
+            <div class="cpu-legend-item">
+              <div class="cpu-legend-color" style="background: #00f0ff;"></div>
+              <span>Control Unit</span>
+            </div>
+            <div class="cpu-legend-item">
+              <div class="cpu-legend-color" style="background: #ff00ff;"></div>
+              <span>ALU</span>
+            </div>
+            <div class="cpu-legend-item">
+              <div class="cpu-legend-color" style="background: #00ff88;"></div>
+              <span>Registers</span>
+            </div>
+            <div class="cpu-legend-item">
+              <div class="cpu-legend-color" style="background: #ffd700;"></div>
+              <span>Buses</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="cpu-controls-panel">
+          <div class="cpu-info-panel">
+            <h3 class="cpu-info-title" id="cpu-component-title">Control Unit</h3>
+            <p class="cpu-info-content" id="cpu-component-info">
+              The <b>Control Unit</b> is the "nerve centre" of the CPU. It fetches instructions from memory, decodes them, and generates control signals that orchestrate all other components to execute the instruction.
+            </p>
+          </div>
+          
+          <div class="cpu-component-list" id="cpu-component-list">
+            <!-- Components generated by JS -->
+          </div>
+          
+          <div class="cpu-xp-display">
+            <span class="cpu-xp-label">Components Explored</span>
+            <span class="cpu-xp-value" id="cpu-explored-count">0/6</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bus Routing Game Screen -->
+    <section id="bus-game" class="game-screen">
+      <div class="game-header">
+        <div class="game-title-section">
+          <button class="game-back-btn" onclick="showWorldMap()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <div>
+            <h1 class="game-title">SIGNAL ROUTER</h1>
+            <p class="game-subtitle">Connect components through the system bus</p>
+          </div>
+        </div>
+        <div class="game-objectives">
+          <div class="game-objective">
+            <span class="game-objective-label">XP Reward</span>
+            <span class="game-objective-value">+400</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bus-game-container">
+        <div class="bus-simulation-area" id="bus-simulation-area">
+          <!-- Bus nodes generated by JS -->
+        </div>
+        
+        <div class="bus-stats-panel">
+          <div class="bus-metric-card">
+            <h4 class="bus-metric-title">Bandwidth Utilization</h4>
+            <div class="bus-metric-value" id="bus-bandwidth">0%</div>
+            <div class="bus-metric-bar">
+              <div class="bus-metric-fill good" id="bus-bandwidth-fill" style="width: 0%"></div>
+            </div>
+          </div>
+          
+          <div class="bus-metric-card">
+            <h4 class="bus-metric-title">Latency</h4>
+            <div class="bus-metric-value" id="bus-latency">0ns</div>
+            <div class="bus-metric-bar">
+              <div class="bus-metric-fill" id="bus-latency-fill" style="width: 0%"></div>
+            </div>
+          </div>
+          
+          <div class="bus-metric-card">
+            <h4 class="bus-metric-title">Connections Made</h4>
+            <div class="bus-metric-value" id="bus-connections">0/5</div>
+          </div>
+          
+          <div class="bus-instruction-panel">
+            <h4 class="bus-instruction-title">Mission Briefing</h4>
+            <p class="bus-instruction-text" id="bus-instruction">
+              Connect the CPU to Memory using the Data Bus. Click on components to create connections. Watch the signal packets travel along the bus!
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Memory City Game Screen -->
+    <section id="memory-game" class="game-screen">
+      <div class="game-header">
+        <div class="game-title-section">
+          <button class="game-back-btn" onclick="showWorldMap()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <div>
+            <h1 class="game-title">MEMORY METROPOLIS</h1>
+            <p class="game-subtitle">Navigate the memory hierarchy from registers to cloud</p>
+          </div>
+        </div>
+        <div class="game-objectives">
+          <div class="game-objective">
+            <span class="game-objective-label">XP Reward</span>
+            <span class="game-objective-value">+600</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="memory-game-container">
+        <div class="memory-city-view" id="memory-city-view">
+          <div class="memory-sky"></div>
+          <div class="memory-buildings" id="memory-buildings">
+            <!-- Buildings generated by JS -->
+          </div>
+          <svg class="memory-connection-path" id="memory-connection-path"></svg>
+        </div>
+        
+        <div class="memory-hierarchy-panel">
+          <div class="memory-detail-card" id="memory-detail-card">
+            <div class="memory-detail-header">
+              <div class="memory-detail-icon" id="memory-detail-icon">🏃</div>
+              <div>
+                <h3 class="memory-detail-title" id="memory-detail-title">Registers</h3>
+                <p class="memory-detail-subtitle" id="memory-detail-subtitle">Fastest accessible storage</p>
+              </div>
+            </div>
+            <div class="memory-stats-grid">
+              <div class="memory-stat">
+                <span class="memory-stat-label">Size</span>
+                <span class="memory-stat-value" id="memory-size">Bytes</span>
+              </div>
+              <div class="memory-stat">
+                <span class="memory-stat-label">Latency</span>
+                <span class="memory-stat-value" id="memory-latency">Cycles</span>
+              </div>
+              <div class="memory-stat">
+                <span class="memory-stat-label">Location</span>
+                <span class="memory-stat-value" id="memory-location">CPU</span>
+              </div>
+              <div class="memory-stat">
+                <span class="memory-stat-label">Type</span>
+                <span class="memory-stat-value" id="memory-type">Volatile</span>
+              </div>
+            </div>
+          </div>
+          
+          <p style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-dim); line-height: 1.6;">
+            Click on any memory level to learn about it. Data packets travel through the hierarchy based on access patterns. The faster the storage, the smaller and more expensive per byte.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Floating Point Explorer -->
+    <section id="float-game" class="game-screen">
+      <div class="game-header">
+        <div class="game-title-section">
+          <button class="game-back-btn" onclick="showWorldMap()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <div>
+            <h1 class="game-title">IEEE 754 LABORATORY</h1>
+            <p class="game-subtitle">Interactive floating-point visualization</p>
+          </div>
+        </div>
+        <div class="game-objectives">
+          <div class="game-objective">
+            <span class="game-objective-label">XP Reward</span>
+            <span class="game-objective-value">+550</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="float-game-container">
+        <div class="float-bit-editor">
+          <div class="float-bit-section">
+            <div class="float-bit-header">
+              <span class="float-bit-label">Sign Bit</span>
+              <span class="float-bit-info">1 bit — 0: positive, 1: negative</span>
+            </div>
+            <div class="float-bits-row" id="float-sign-row">
+              <div class="float-bit" data-index="31" data-type="sign">0</div>
+            </div>
+          </div>
+          
+          <div class="float-bit-section">
+            <div class="float-bit-header">
+              <span class="float-bit-label">Exponent</span>
+              <span class="float-bit-info">8 bits — biased by 127</span>
+            </div>
+            <div class="float-bits-row" id="float-exp-row">
+              <!-- Generated by JS -->
+            </div>
+          </div>
+          
+          <div class="float-bit-section">
+            <div class="float-bit-header">
+              <span class="float-bit-label">Mantissa (Fraction)</span>
+              <span class="float-bit-info">23 bits — normalized significand</span>
+            </div>
+            <div class="float-bits-row" id="float-mantissa-row">
+              <!-- Generated by JS -->
+            </div>
+          </div>
+          
+          <div class="float-special-values">
+            <button class="float-special-btn" onclick="setSpecialFloat('zero')">+0</button>
+            <button class="float-special-btn" onclick="setSpecialFloat('neg-zero')">-0</button>
+            <button class="float-special-btn" onclick="setSpecialFloat('inf')">+∞</button>
+            <button class="float-special-btn" onclick="setSpecialFloat('neg-inf')">-∞</button>
+            <button class="float-special-btn" onclick="setSpecialFloat('nan')">NaN</button>
+            <button class="float-special-btn" onclick="setSpecialFloat('one')">1.0</button>
+          </div>
+        </div>
+        
+        <div class="float-result-panel">
+          <div class="float-visualization">
+            <div class="float-number-display positive" id="float-number-display">0.0</div>
+            <div class="float-hex-display" id="float-hex-display">0x00000000</div>
+          </div>
+          
+          <div class="float-components-card">
+            <div class="float-component-row">
+              <span class="float-component-name">Sign</span>
+              <span class="float-component-value" id="float-comp-sign">0</span>
+            </div>
+            <div class="float-component-row">
+              <span class="float-component-name">Biased Exponent</span>
+              <span class="float-component-value" id="float-comp-exp">0 (127)</span>
+            </div>
+            <div class="float-component-row">
+              <span class="float-component-name">Actual Exponent</span>
+              <span class="float-component-value" id="float-comp-actual-exp">-127</span>
+            </div>
+            <div class="float-component-row">
+              <span class="float-component-name">Mantissa (hidden bit + fraction)</span>
+              <span class="float-component-value" id="float-comp-mantissa">1.0</span>
+            </div>
+          </div>
+          
+          <p style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-dim); line-height: 1.6;">
+            Click on any bit to toggle 0/1. Watch the number update in real-time! Try special values or build your own patterns.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ALU Circuit Builder -->
+    <section id="alu-game" class="game-screen">
+      <div class="game-header">
+        <div class="game-title-section">
+          <button class="game-back-btn" onclick="showWorldMap()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <div>
+            <h1 class="game-title">LOGIC FORGE</h1>
+            <p class="game-subtitle">Build and test logic gates</p>
+          </div>
+        </div>
+        <div class="game-objectives">
+          <div class="game-objective">
+            <span class="game-objective-label">XP Reward</span>
+            <span class="game-objective-value">+450</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="alu-game-container">
+        <div class="alu-circuit-canvas" id="alu-circuit-canvas">
+          <div class="alu-circuit-grid"></div>
+          <div class="alu-circuit-area" id="alu-circuit-area">
+            <!-- Gates placed here by user -->
+          </div>
+        </div>
+        
+        <div class="alu-toolbox">
+          <div class="alu-tool-section">
+            <h4 class="alu-tool-title">Basic Gates</h4>
+            <div class="alu-tool-grid">
+              <div class="alu-tool-item" draggable="true" data-gate="AND">
+                <div class="alu-tool-icon">ⅼⅼ</div>
+                <span class="alu-tool-name">AND</span>
+              </div>
+              <div class="alu-tool-item" draggable="true" data-gate="OR">
+                <div class="alu-tool-icon">ⅼ+</div>
+                <span class="alu-tool-name">OR</span>
+              </div>
+              <div class="alu-tool-item" draggable="true" data-gate="NOT">
+                <div class="alu-tool-icon">¬</div>
+                <span class="alu-tool-name">NOT</span>
+              </div>
+              <div class="alu-tool-item" draggable="true" data-gate="NAND">
+                <div class="alu-tool-icon">⊼</div>
+                <span class="alu-tool-name">NAND</span>
+              </div>
+              <div class="alu-tool-item" draggable="true" data-gate="NOR">
+                <div class="alu-tool-icon">⊽</div>
+                <span class="alu-tool-name">NOR</span>
+              </div>
+              <div class="alu-tool-item" draggable="true" data-gate="XOR">
+                <div class="alu-tool-icon">⊕</div>
+                <span class="alu-tool-name">XOR</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="alu-tool-section">
+            <h4 class="alu-tool-title">Input / Output</h4>
+            <div class="alu-tool-grid">
+              <div class="alu-tool-item" draggable="true" data-gate="INPUT">
+                <div class="alu-tool-icon">→</div>
+                <span class="alu-tool-name">Input</span>
+              </div>
+              <div class="alu-tool-item" draggable="true" data-gate="OUTPUT">
+                <div class="alu-tool-icon">●</div>
+                <span class="alu-tool-name">Output</span>
+              </div>
+              <div class="alu-tool-item" draggable="true" data-gate="LED">
+                <div class="alu-tool-icon">💡</div>
+                <span class="alu-tool-name">LED</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="alu-tool-section">
+            <h4 class="alu-tool-title">Truth Table</h4>
+            <table class="alu-truth-table" id="alu-truth-table">
+              <thead>
+                <tr>
+                  <th>A</th>
+                  <th>B</th>
+                  <th>Out</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>0</td><td>0</td><td class="output">-</td></tr>
+                <tr><td>0</td><td>1</td><td class="output">-</td></tr>
+                <tr><td>1</td><td>0</td><td class="output">-</td></tr>
+                <tr><td>1</td><td>1</td><td class="output">-</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Booth Multiplication Visualizer -->
+    <section id="booth-game" class="game-screen">
+      <div class="game-header">
+        <div class="game-title-section">
+          <button class="game-back-btn" onclick="showWorldMap()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <div>
+            <h1 class="game-title">BOOTH'S ALGORITHM ARENA</h1>
+            <p class="game-subtitle">Visualize signed multiplication step by step</p>
+          </div>
+        </div>
+        <div class="game-objectives">
+          <div class="game-objective">
+            <span class="game-objective-label">XP Reward</span>
+            <span class="game-objective-value">+700</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="booth-game-container">
+        <div class="booth-controls-bar">
+          <div class="booth-input-group">
+            <div class="booth-input-field">
+              <label class="booth-input-label">Multiplicand (BR)</label>
+              <input type="number" class="booth-input" id="booth-multiplicand" value="7" min="-32" max="31">
+              <span class="booth-input-binary" id="booth-multiplicand-bin">0111</span>
+            </div>
+            <div class="booth-input-field">
+              <label class="booth-input-label">Multiplier (Q)</label>
+              <input type="number" class="booth-input" id="booth-multiplier" value="3" min="-32" max="31">
+              <span class="booth-input-binary" id="booth-multiplier-bin">0011</span>
+            </div>
+          </div>
+          
+          <div class="booth-step-counter">
+            Step: <span id="booth-step-num">0</span> / <span id="booth-step-total">0</span>
+          </div>
+          
+          <div class="booth-action-buttons">
+            <button class="booth-btn primary" id="booth-start-btn" onclick="boothStart()">Start</button>
+            <button class="booth-btn secondary" id="booth-step-btn" onclick="boothStep()" disabled>Step</button>
+            <button class="booth-btn secondary" id="booth-reset-btn" onclick="boothReset()">Reset</button>
+            <button class="booth-btn secondary" id="booth-auto-btn" onclick="boothAuto()">Auto</button>
+          </div>
+        </div>
+        
+        <div class="booth-simulation-area">
+          <div class="booth-sc-indicator">
+            Sequence Counter: <span id="booth-sc-value">4</span>
+          </div>
+          
+          <div class="booth-registers" id="booth-registers">
+            <!-- Registers rendered by JS -->
+          </div>
+          
+          <div class="booth-animation-layer" id="booth-animation-layer"></div>
+        </div>
+        
+        <div class="booth-log-panel">
+          <h4 class="booth-log-title">Execution Log</h4>
+          <div id="booth-log-entries">
+            <!-- Log entries added by JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Fetch-Execute Cycle -->
+    <section id="fetch-game" class="game-screen">
+      <div class="game-header">
+        <div class="game-title-section">
+          <button class="game-back-btn" onclick="showWorldMap()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <div>
+            <h1 class="game-title">INSTRUCTION PIPELINE</h1>
+            <p class="game-subtitle">Watch the fetch-decode-execute cycle in action</p>
+          </div>
+        </div>
+        <div class="game-objectives">
+          <div class="game-objective">
+            <span class="game-objective-label">XP Reward</span>
+            <span class="game-objective-value">+650</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="fetch-game-container">
+        <div class="fetch-simulation" id="fetch-simulation">
+          <div class="fetch-clock-pulse">
+            <svg class="fetch-clock-wave" viewBox="0 0 60 20">
+              <path d="M0 10 L10 10 L10 2 L20 18 L30 2 L40 18 L50 2 L50 10 L60 10" 
+                    fill="none" stroke="#00f0ff" stroke-width="2"/>
+            </svg>
+            <span class="fetch-clock-text">Clock: <span id="fetch-clock-val">0</span> Hz</span>
+          </div>
+          
+          <!-- Components positioned by JS -->
+        </div>
+        
+        <div class="fetch-cycle-panel">
+          <div class="fetch-stage-card active" data-stage="fetch" onclick="fetchSetStage('fetch')">
+            <div class="fetch-stage-header">
+              <span class="fetch-stage-number">1</span>
+              <span class="fetch-stage-title">Fetch</span>
+            </div>
+            <p class="fetch-stage-desc">Fetch instruction from memory into the Instruction Register</p>
+          </div>
+          
+          <div class="fetch-stage-card" data-stage="decode" onclick="fetchSetStage('decode')">
+            <div class="fetch-stage-header">
+              <span class="fetch-stage-number">2</span>
+              <span class="fetch-stage-title">Decode</span>
+            </div>
+            <p class="fetch-stage-desc">Decode the instruction and prepare operands</p>
+          </div>
+          
+          <div class="fetch-stage-card" data-stage="execute" onclick="fetchSetStage('execute')">
+            <div class="fetch-stage-header">
+              <span class="fetch-stage-number">3</span>
+              <span class="fetch-stage-title">Execute</span>
+            </div>
+            <p class="fetch-stage-desc">Perform the actual operation in ALU</p>
+          </div>
+          
+          <div class="fetch-stage-card" data-stage="store" onclick="fetchSetStage('store')">
+            <div class="fetch-stage-header">
+              <span class="fetch-stage-number">4</span>
+              <span class="fetch-stage-title">Store</span>
+            </div>
+            <p class="fetch-stage-desc">Write result back to memory or register</p>
+          </div>
+          
+          <div class="fetch-controls-card">
+            <div class="fetch-controls-grid">
+              <button class="fetch-control-btn active" id="fetch-play-btn" onclick="fetchPlay()">
+                <span>▶</span> Play
+              </button>
+              <button class="fetch-control-btn" id="fetch-pause-btn" onclick="fetchPause()">
+                <span>⏸</span> Pause
+              </button>
+              <button class="fetch-control-btn" id="fetch-step-btn" onclick="fetchStep()">
+                <span>→</span> Step
+              </button>
+              <button class="fetch-control-btn" id="fetch-slow-btn" onclick="fetchSlow()">
+                <span>🐢</span> Slow
+              </button>
+              <button class="fetch-control-btn" id="fetch-fast-btn" onclick="fetchFast()">
+                <span>🚀</span> Fast
+              </button>
+              <button class="fetch-control-btn" id="fetch-reset-btn" onclick="fetchReset()">
+                <span>↺</span> Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Instruction Set Card Game -->
+    <section id="instr-game" class="game-screen">
+      <div class="game-header">
+        <div class="game-title-section">
+          <button class="game-back-btn" onclick="showWorldMap()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <div>
+            <h1 class="game-title">INSTRUCTION ASSEMBLER</h1>
+            <p class="game-subtitle">Drag and drop instructions to build programs</p>
+          </div>
+        </div>
+        <div class="game-objectives">
+          <div class="game-objective">
+            <span class="game-objective-label">XP Reward</span>
+            <span class="game-objective-value">+500</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="instr-game-container">
+        <div class="instr-workspace">
+          <div class="instr-drop-zone" id="instr-drop-zone">
+            <!-- Dropped cards appear here -->
+          </div>
+        </div>
+        
+        <div class="instr-palette">
+          <div class="instr-palette-section">
+            <h4 class="instr-palette-title">Instructions</h4>
+            <div class="instr-palette-cards" id="instr-palette-cards">
+              <!-- Generated by JS -->
+            </div>
+          </div>
+          
+          <div class="instr-palette-section">
+            <h4 class="instr-palette-title">Registers State</h4>
+            <div class="instr-register-display" id="instr-register-display">
+              <!-- Generated by JS -->
+            </div>
+          </div>
+          
+          <button class="instr-execute-btn" id="instr-execute-btn" onclick="instrExecute()" disabled>
+            Execute Program
+          </button>
+          
+          <button class="booth-btn secondary" onclick="instrClear()" style="width: 100%;">
+            Clear Workspace
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SKILL TREE OVERLAY
+═══════════════════════════════════════════════════════════════════════════ -->
+<div id="skill-tree-overlay">
+  <div class="skill-tree-container">
+    <div class="skill-tree-header">
+      <h1 class="skill-tree-title">Neural Architecture Skill Tree</h1>
+      <p class="skill-tree-subtitle">Master concepts to unlock new abilities</p>
+    </div>
+    <div class="skill-tree-grid" id="skill-tree-grid">
+      <!-- Skill nodes generated by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     ACHIEVEMENT POPUP
+═══════════════════════════════════════════════════════════════════════════ -->
+<div id="achievement-popup">
+  <div class="achievement-icon">🏆</div>
+  <div class="achievement-info">
+    <div class="achievement-label">Achievement Unlocked</div>
+    <div class="achievement-title" id="achievement-title">First Steps</div>
+    <div class="achievement-desc" id="achievement-desc">Complete your first module</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     NOTIFICATION STACK
+═══════════════════════════════════════════════════════════════════════════ -->
+<div id="notification-stack"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     JAVASCRIPT — Main Application Logic
+═══════════════════════════════════════════════════════════════════════════ -->
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// GAME STATE & PERSISTENCE
+// ═══════════════════════════════════════════════════════════════════════════
+const GameState = {
+  xp: 0,
+  level: 1,
+  streak: 0,
+  completedModules: [],
+  exploredComponents: {},
+  achievements: [],
+  skillTree: {},
+  soundEnabled: false,
+  
+  save() {
+    localStorage.setItem('coa_game_save', JSON.stringify({
+      xp: this.xp,
+      level: this.level,
+      streak: this.streak,
+      completedModules: this.completedModules,
+      exploredComponents: this.exploredComponents,
+      achievements: this.achievements,
+      skillTree: this.skillTree
+    }));
+  },
+  
+  load() {
+    const saved = localStorage.getItem('coa_game_save');
+    if (saved) {
+      const data = JSON.parse(saved);
+      Object.assign(this, data);
+      return true;
+    }
+    return false;
+  },
+  
+  addXP(amount) {
+    this.xp += amount;
+    const xpNeeded = this.level * 1000;
+    while (this.xp >= xpNeeded) {
+      this.xp -= xpNeeded;
+      this.level++;
+      showNotification('Level Up!', `You are now level ${this.level}`, 'success');
+    }
+    this.save();
+    updateHUD();
+  },
+  
+  completeModule(moduleId, stars = 0) {
+    if (!this.completedModules.includes(moduleId)) {
+      this.completedModules.push(moduleId);
+      const baseXP = { cpu: 500, bus: 400, memory: 600, float: 550, alu: 450, booth: 700, fetch: 650, instr: 500 };
+      const xpGain = (baseXP[moduleId] || 300) * (1 + stars * 0.5);
+      this.addXP(Math.floor(xpGain));
+      showNotification('Module Complete!', `+${Math.floor(xpGain)} XP earned`, 'xp');
+      this.streak++;
+      this.save();
+    }
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AUDIO SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════
+const AudioSystem = {
+  ctx: null,
+  
+  init() {
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  },
+  
+  playTone(freq, duration, type = 'sine') {
+    if (!GameState.soundEnabled || !this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + duration);
+  },
+  
+  playClick() { this.playTone(800, 0.05, 'square'); },
+  playSuccess() { 
+    this.playTone(523, 0.1); 
+    setTimeout(() => this.playTone(659, 0.1), 100);
+    setTimeout(() => this.playTone(784, 0.15), 200);
+  },
+  playError() { this.playTone(200, 0.2, 'sawtooth'); },
+  playXP() { this.playTone(1200, 0.08); setTimeout(() => this.playTone(1400, 0.1), 50); }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NOTIFICATION SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════
+function showNotification(title, message, type = 'info') {
+  const stack = document.getElementById('notification-stack');
+  const notif = document.createElement('div');
+  notif.className = 'notification';
+  notif.innerHTML = `
+    <div class="notification-icon ${type}">${getNotifIcon(type)}</div>
+    <div class="notification-text"><strong>${title}</strong><br>${message}</div>
+  `;
+  stack.appendChild(notif);
+  AudioSystem.playClick();
+  setTimeout(() => notif.remove(), 3000);
+}
+
+function getNotifIcon(type) {
+  const icons = {
+    success: '✓',
+    info: 'i',
+    warning: '⚠',
+    xp: '⭐'
+  };
+  return icons[type] || 'i';
+}
+
+function showAchievement(title, desc) {
+  const popup = document.getElementById('achievement-popup');
+  document.getElementById('achievement-title').textContent = title;
+  document.getElementById('achievement-desc').textContent = desc;
+  popup.classList.add('show');
+  AudioSystem.playSuccess();
+  setTimeout(() => popup.classList.remove('show'), 4000);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HUD UPDATE
+// ═══════════════════════════════════════════════════════════════════════════
+function updateHUD() {
+  document.getElementById('hud-xp').textContent = GameState.xp.toLocaleString();
+  document.getElementById('hud-level').textContent = GameState.level;
+  document.getElementById('hud-streak').textContent = GameState.streak;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NAVIGATION & SCREEN MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════════
+function showScreen(screenId) {
+  document.querySelectorAll('.screen, .game-screen').forEach(s => s.classList.remove('active'));
+  const screen = document.getElementById(screenId);
+  if (screen) {
+    screen.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+function showWorldMap() {
+  showScreen('world-map');
+  initWorldMap();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BOOT SEQUENCE
+// ═══════════════════════════════════════════════════════════════════════════
+const bootMessages = [
+  'Initializing neural pathways...',
+  'Loading architecture schemas...',
+  'Calibrating quantum processors...',
+  'Establishing memory banks...',
+  'Mapping instruction cycles...',
+  'Activating ALU subsystems...',
+  'Synchronizing bus interfaces...',
+  'Compiling knowledge matrices...',
+  'Booting COA.EXE v1.0...',
+  'System ready.'
+];
+
+function runBootSequence() {
+  const progressFill = document.getElementById('boot-progress-fill');
+  const bootLog = document.getElementById('boot-log');
+  const enterBtn = document.getElementById('boot-enter-btn');
+  
+  let step = 0;
+  const interval = setInterval(() => {
+    if (step < bootMessages.length) {
+      const line = document.createElement('div');
+      line.className = 'boot-log-line';
+      line.textContent = bootMessages[step];
+      bootLog.appendChild(line);
+      
+      requestAnimationFrame(() => line.classList.add('visible'));
+      
+      progressFill.style.width = ((step + 1) / bootMessages.length * 100) + '%';
+      step++;
+    } else {
+      clearInterval(interval);
+      enterBtn.classList.add('visible');
+    }
+  }, 150);
+}
+
+document.getElementById('boot-enter-btn').addEventListener('click', () => {
+  AudioSystem.init();
+  AudioSystem.playClick();
+  
+  const landing = document.getElementById('landing-screen');
+  const app = document.getElementById('app');
+  
+  landing.classList.add('hidden');
+  setTimeout(() => {
+    app.classList.add('ready');
+    GameState.load();
+    updateHUD();
+    initWorldMap();
+    initCPUGame();
+    initBusGame();
+    initMemoryGame();
+    initFloatGame();
+    initALUGame();
+    initBoothGame();
+    initFetchGame();
+    initInstrGame();
+    initSkillTree();
+  }, 500);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BACKGROUND ANIMATION
+// ═══════════════════════════════════════════════════════════════════════════
+function initBackgroundAnimation() {
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  
+  const particles = [];
+  const particleCount = 50;
+  
+  for (let i = 0; i < particleCount; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: (Math.random() - 0.5) * 0.5,
+      size: Math.random() * 2 + 1,
+      opacity: Math.random() * 0.5 + 0.2
+    });
+  }
+  
+  const connections = [];
+  
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw connections
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.1)';
+    ctx.lineWidth = 1;
+    
+    for (const p1 of particles) {
+      for (const p2 of particles) {
+        const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+        if (dist < 150) {
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.globalAlpha = (1 - dist / 150) * 0.3;
+          ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+    
+    // Draw particles
+    for (const p of particles) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(0, 240, 255, ${p.opacity})`;
+      ctx.fill();
+      
+      p.x += p.vx;
+      p.y += p.vy;
+      
+      if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+      if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+    }
+    
+    requestAnimationFrame(animate);
+  }
+  
+  animate();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WORLD MAP
+// ═══════════════════════════════════════════════════════════════════════════
+const worldNodes = [
+  { id: 'cpu', icon: '🔲', title: 'CPU Architecture', desc: 'Control Unit, ALU, Registers', color: '#00f0ff', x: 0, y: 0 },
+  { id: 'bus', icon: '⚡', title: 'System Bus', desc: 'Data, Address, Control', color: '#ffd700', x: 1, y: 0 },
+  { id: 'memory', icon: '🏙️', title: 'Memory Hierarchy', desc: 'Registers to Cloud', color: '#ff00ff', x: 2, y: 0 },
+  { id: 'float', icon: '🔢', title: 'Floating Point', desc: 'IEEE 754 Format', color: '#00ff88', x: 3, y: 0 },
+  { id: 'alu', icon: '⚙️', title: 'Logic Gates', desc: 'Build your own circuits', color: '#ff6b00', x: 4, y: 0 },
+  { id: 'booth', icon: '✖️', title: "Booth's Algorithm", desc: 'Signed multiplication', color: '#b366ff', x: 0, y: 1 },
+  { id: 'fetch', icon: '🔄', title: 'Fetch-Execute', desc: 'Instruction cycle', color: '#ff3366', x: 1, y: 1 },
+  { id: 'instr', icon: '📋', title: 'Instruction Set', desc: 'ISA & formats', color: '#ffcc00', x: 2, y: 1 }
+];
+
+function initWorldMap() {
+  const container = document.getElementById('world-nodes');
+  container.innerHTML = '';
+  
+  worldNodes.forEach(node => {
+    const isUnlocked = GameState.completedModules.includes(node.id) || 
+                       GameState.completedModules.length === 0 || 
+                       (node.y === 0) ||
+                       (node.y === 1 && GameState.completedModules.length >= 3);
+    
+    const progress = GameState.exploredComponents[node.id] || 0;
+    
+    const div = document.createElement('div');
+    div.className = `world-node ${isUnlocked ? '' : 'locked'}`;
+    div.innerHTML = `
+      <div class="world-node-icon" style="color: ${isUnlocked ? node.color : 'var(--text-dim)'}">${node.icon}</div>
+      <h3 class="world-node-title">${node.title}</h3>
+      <p class="world-node-desc">${node.desc}</p>
+      <div class="world-node-progress">
+        <div class="world-node-progress-bar">
+          <div class="world-node-progress-fill" style="width: ${isUnlocked ? progress : 0}%"></div>
+        </div>
+        <span>${progress}%</span>
+      </div>
+      <div class="world-node-stars">
+        <svg class="world-node-star ${progress >= 100 ? 'earned' : ''}" viewBox="0 0 24 24" fill="${progress >= 100 ? '#ffd700' : '#333'}">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+        <svg class="world-node-star ${progress >= 150 ? 'earned' : ''}" viewBox="0 0 24 24" fill="${progress >= 150 ? '#ffd700' : '#333'}">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+        <svg class="world-node-star ${progress >= 200 ? 'earned' : ''}" viewBox="0 0 24 24" fill="${progress >= 200 ? '#ffd700' : '#333'}">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+      </div>
+    `;
+    
+    if (isUnlocked) {
+      div.addEventListener('click', () => openModule(node.id));
+    }
+    
+    container.appendChild(div);
+  });
+}
+
+function openModule(moduleId) {
+  showScreen(moduleId + '-game');
+  
+  // Mark as explored
+  if (!GameState.exploredComponents[moduleId]) {
+    GameState.exploredComponents[moduleId] = 0;
+  }
+  GameState.save();
+  
+  // Module-specific initialization
+  switch(moduleId) {
+    case 'cpu': animateCPUCanvas(); break;
+    case 'bus': animateBusSimulation(); break;
+    case 'booth': updateBoothDisplay(); break;
+    case 'float': updateFloatDisplay(); break;
+    case 'fetch': animateFetchCycle(); break;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CPU GAME
+// ═══════════════════════════════════════════════════════════════════════════
+const cpuComponents = [
+  { id: 'control', icon: '🎛️', name: 'Control Unit', status: 'damaged',
+    desc: 'The <b>Control Unit</b> fetches instructions from memory, decodes them, and generates control signals that orchestrate all other components.' },
+  { id: 'alu', icon: '🧮', name: 'ALU', status: 'damaged',
+    desc: 'The <b>ALU</b> performs all arithmetic (add, subtract, multiply, divide) and logic (AND, OR, NOT, XOR) operations.' },
+  { id: 'registers', icon: '📦', name: 'Registers', status: 'damaged',
+    desc: '<b>Registers</b> are fast storage locations within the CPU: PC (Program Counter), MAR, MDR, IR, AC, and general-purpose registers.' },
+  { id: 'cache', icon: '⚡', name: 'Cache (L1/L2)', status: 'damaged',
+    desc: '<b>Cache Memory</b> is ultra-fast SRAM that stores frequently accessed data, bridging the speed gap between CPU and main memory.' },
+  { id: 'fpu', icon: '🔢', name: 'FPU', status: 'damaged',
+    desc: 'The <b>FPU</b> (Floating Point Unit) handles decimal calculations with specialized hardware for IEEE 754 operations.' },
+  { id: 'clock', icon: '⏱️', name: 'Clock Generator', status: 'damaged',
+    desc: 'The <b>Clock</b> provides synchronized timing signals that pace all CPU operations, measured in GHz (billions of cycles/second).' }
+];
+
+function initCPUGame() {
+  const list = document.getElementById('cpu-component-list');
+  list.innerHTML = '';
+  
+  cpuComponents.forEach(comp => {
+    const div = document.createElement('div');
+    div.className = 'cpu-component-item';
+    div.dataset.id = comp.id;
+    div.innerHTML = `
+      <div class="cpu-component-icon">${comp.icon}</div>
+      <div class="cpu-component-info">
+        <div class="cpu-component-name">${comp.name}</div>
+        <div class="cpu-component-status ${comp.status}">${comp.status === 'damaged' ? 'Click to explore' : 'Operational'}</div>
+      </div>
+    `;
+    div.addEventListener('click', () => selectCPUComponent(comp));
+    list.appendChild(div);
+  });
+}
+
+function selectCPUComponent(comp) {
+  document.getElementById('cpu-component-title').textContent = comp.name;
+  document.getElementById('cpu-component-info').innerHTML = comp.desc;
+  
+  document.querySelectorAll('.cpu-component-item').forEach(el => el.classList.remove('selected'));
+  document.querySelector(`.cpu-component-item[data-id="${comp.id}"]`).classList.add('selected');
+  
+  if (comp.status === 'damaged') {
+    comp.status = 'operational';
+    document.querySelector(`.cpu-component-item[data-id="${comp.id}"] .cpu-component-status`).className = 'cpu-component-status operational';
+    document.querySelector(`.cpu-component-item[data-id="${comp.id}"] .cpu-component-status`).textContent = 'Operational';
+    
+    AudioSystem.playSuccess();
+    
+    const explored = Object.values(GameState.exploredComponents);
+    const cpuExplored = explored.filter(v => v > 0).length;
+    document.getElementById('cpu-explored-count').textContent = `${cpuExplored}/6`;
+    
+    GameState.exploredComponents['cpu'] = (GameState.exploredComponents['cpu'] || 0) + 34;
+    GameState.addXP(84);
+    
+    if (cpuExplored >= 6) {
+      GameState.completeModule('cpu', 1);
+      showAchievement('CPU Master', 'Explored all CPU components');
+    }
+    
+    GameState.save();
+  }
+}
+
+function animateCPUCanvas() {
+  const canvas = document.getElementById('cpu-canvas');
+  const ctx = canvas.getContext('2d');
+  
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw CPU outline
+    ctx.strokeStyle = '#00f0ff';
+    ctx.lineWidth = 3;
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 20;
+    roundRect(ctx, 100, 50, 600, 400, 20);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    
+    // Draw internal components
+    drawCPUComponent(ctx, 180, 100, 120, 80, '#00f0ff', 'CONTROL\nUNIT');
+    drawCPUComponent(ctx, 350, 100, 120, 80, '#ff00ff', 'ALU');
+    drawCPUComponent(ctx, 520, 100, 120, 80, '#00ff88', 'REGISTERS');
+    
+    drawCPUComponent(ctx, 180, 220, 180, 60, '#b366ff', 'CACHE L1');
+    drawCPUComponent(ctx, 400, 220, 120, 60, '#ff6b00', 'FPU');
+    
+    drawCPUComponent(ctx, 200, 320, 150, 80, '#ffd700', 'CLOCK\nGENERATOR');
+    drawCPUComponent(ctx, 400, 320, 150, 80, '#ff3366', 'PROGRAM\nCOUNTER');
+    
+    // Draw buses
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 4;
+    ctx.shadowColor = '#ffd700';
+    ctx.shadowBlur = 10;
+    
+    // Horizontal bus
+    ctx.beginPath();
+    ctx.moveTo(120, 250);
+    ctx.lineTo(620, 250);
+    ctx.stroke();
+    
+    // Vertical buses
+    ctx.beginPath();
+    ctx.moveTo(240, 180);
+    ctx.lineTo(240, 280);
+    ctx.moveTo(580, 180);
+    ctx.lineTo(580, 280);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    
+    requestAnimationFrame(draw);
+  }
+  
+  draw();
+}
+
+function drawCPUComponent(ctx, x, y, w, h, color, text) {
+  ctx.fillStyle = 'rgba(10, 22, 40, 0.8)';
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 15;
+  
+  roundRect(ctx, x, y, w, h, 10);
+  ctx.fill();
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  
+  ctx.fillStyle = color;
+  ctx.font = 'bold 12px Orbitron';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x + w/2, y + h/2);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BUS ROUTING GAME
+// ═══════════════════════════════════════════════════════════════════════════
+const busNodes = [
+  { id: 'cpu', icon: '🔲', label: 'CPU', x: 50, y: 150 },
+  { id: 'alu', icon: '🧮', label: 'ALU', x: 200, y: 50 },
+  { id: 'memory', icon: '💾', label: 'MEM', x: 350, y: 150 },
+  { id: 'io', icon: '📱', label: 'I/O', x: 200, y: 250 },
+  { id: 'registers', icon: '📦', label: 'REG', x: 500, y: 100 }
+];
+
+const busConnections = [];
+let busSelected = null;
+let busSignals = [];
+
+function initBusGame() {
+  const area = document.getElementById('bus-simulation-area');
+  area.innerHTML = '';
+  
+  busNodes.forEach(node => {
+    const div = document.createElement('div');
+    div.className = 'bus-node';
+    div.id = `bus-node-${node.id}`;
+    div.style.left = node.x + 'px';
+    div.style.top = node.y + 'px';
+    div.innerHTML = `
+      <span class="bus-node-icon">${node.icon}</span>
+      <span class="bus-node-label">${node.label}</span>
+    `;
+    div.addEventListener('click', () => selectBusNode(node.id));
+    area.appendChild(div);
+  });
+}
+
+function selectBusNode(nodeId) {
+  const node = busNodes.find(n => n.id === nodeId);
+  const div = document.getElementById(`bus-node-${nodeId}`);
+  
+  if (busSelected === null) {
+    busSelected = nodeId;
+    div.classList.add('selected');
+    AudioSystem.playClick();
+  } else if (busSelected !== nodeId) {
+    // Create connection
+    const fromNode = busNodes.find(n => n.id === busSelected);
+    const toNode = node;
+    
+    if (!busConnections.find(c => (c.from === busSelected && c.to === nodeId) || (c.from === nodeId && c.to === busSelected))) {
+      busConnections.push({ from: busSelected, to: nodeId });
+      div.classList.add('connected');
+      document.getElementById(`bus-node-${busSelected}`).classList.add('connected');
+      
+      AudioSystem.playSuccess();
+      updateBusStats();
+      
+      // Animate signal packet
+      animateBusSignal(fromNode, toNode);
+      
+      // Check for completion
+      if (busConnections.length >= 4) {
+        GameState.completeModule('bus', 1);
+        showAchievement('Signal Router', 'Created all bus connections');
+      }
+    }
+    
+    document.getElementById(`bus-node-${busSelected}`).classList.remove('selected');
+    busSelected = null;
+  }
+}
+
+function updateBusStats() {
+  const bandwidth = Math.min(busConnections.length * 25, 100);
+  const latency = Math.max(100 - busConnections.length * 20, 10);
+  
+  document.getElementById('bus-bandwidth').textContent = bandwidth + '%';
+  document.getElementById('bus-bandwidth-fill').style.width = bandwidth + '%';
+  document.getElementById('bus-bandwidth-fill').className = 'bus-metric-fill ' + (bandwidth > 75 ? 'good' : bandwidth > 50 ? 'medium' : 'bad');
+  
+  document.getElementById('bus-latency').textContent = latency + 'ns';
+  document.getElementById('bus-latency-fill').style.width = (100 - latency) + '%';
+  document.getElementById('bus-latency-fill').className = 'bus-metric-fill ' + (latency < 30 ? 'good' : latency < 60 ? 'medium' : 'bad');
+  
+  document.getElementById('bus-connections').textContent = `${busConnections.length}/5`;
+  
+  GameState.exploredComponents['bus'] = busConnections.length * 25;
+  GameState.addXP(busConnections.length * 50);
+  GameState.save();
+}
+
+function animateBusSignal(from, to) {
+  const area = document.getElementById('bus-simulation-area');
+  const packet = document.createElement('div');
+  packet.className = 'bus-signal-particle';
+  packet.textContent = '⚡';
+  area.appendChild(packet);
+  
+  const startX = from.x + 40;
+  const startY = from.y + 40;
+  const endX = to.x + 40;
+  const endY = to.y + 40;
+  
+  packet.style.left = startX + 'px';
+  packet.style.top = startY + 'px';
+  
+  let progress = 0;
+  const duration = 500;
+  const startTime = performance.now();
+  
+  function animate(currentTime) {
+    progress = (currentTime - startTime) / duration;
+    
+    if (progress < 1) {
+      const x = startX + (endX - startX) * progress;
+      const y = startY + (endY - startY) * progress;
+      packet.style.left = x + 'px';
+      packet.style.top = y + 'px';
+      requestAnimationFrame(animate);
+    } else {
+      packet.remove();
+    }
+  }
+  
+  requestAnimationFrame(animate);
+}
+
+function animateBusSimulation() {
+  // Continuous subtle animation for active connections
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MEMORY CITY GAME
+// ═══════════════════════════════════════════════════════════════════════════
+const memoryLevels = [
+  { id: 'registers', icon: '🏃', name: 'Registers', size: '256 B', latency: '1 cycle', location: 'CPU Core', type: 'Volatile', color: '#00f0ff', height: 80 },
+  { id: 'l1', icon: '⚡', name: 'L1 Cache', size: '32 KB', latency: '4 cycles', location: 'On-Chip', type: 'Volatile', color: '#ff00ff', height: 120 },
+  { id: 'l2', icon: '💫', name: 'L2 Cache', size: '256 KB', latency: '12 cycles', location: 'On-Chip', type: 'Volatile', color: '#b366ff', height: 160 },
+  { id: 'l3', icon: '🌟', name: 'L3 Cache', size: '8 MB', latency: '30 cycles', location: 'On-Chip', type: 'Volatile', color: '#ff6b00', height: 200 },
+  { id: 'ram', icon: '🏠', name: 'RAM', size: '8-64 GB', latency: '100 cycles', location: 'Motherboard', type: 'Volatile', color: '#00ff88', height: 280 },
+  { id: 'ssd', icon: '💾', name: 'SSD', size: '256 GB-2 TB', latency: '100K cycles', location: 'Storage', type: 'Non-Volatile', color: '#ffd700', height: 350 },
+  { id: 'disk', icon: '💿', name: 'HDD', size: '1-10 TB', latency: '10M cycles', location: 'Storage', type: 'Non-Volatile', color: '#ffcc00', height: 420 }
+];
+
+function initMemoryGame() {
+  const container = document.getElementById('memory-buildings');
+  container.innerHTML = '';
+  
+  memoryLevels.forEach((level, idx) => {
+    const building = document.createElement('div');
+    building.className = 'memory-building';
+    building.dataset.id = level.id;
+    
+    const windows = Math.floor(Math.random() * 6) + 3;
+    let windowsHTML = '';
+    for (let i = 0; i < windows; i++) {
+      windowsHTML += '<div class="memory-building-window"></div>';
+    }
+    
+    building.innerHTML = `
+      <div class="memory-building-body" style="--building-color: ${level.color}; width: ${50 + idx * 15}px; height: ${level.height}px;">
+        <div class="memory-building-windows" style="grid-template-columns: repeat(${Math.min(windows, 3)}, 1fr);">
+          ${windowsHTML}
+        </div>
+      </div>
+      <div class="memory-building-label">
+        <div class="memory-building-name">${level.name}</div>
+        <div class="memory-building-speed">${level.latency}</div>
+      </div>
+    `;
+    
+    building.addEventListener('click', () => selectMemoryLevel(level));
+    container.appendChild(building);
+  });
+  
+  selectMemoryLevel(memoryLevels[0]);
+}
+
+function selectMemoryLevel(level) {
+  document.querySelectorAll('.memory-building').forEach(el => el.style.opacity = '0.5');
+  document.querySelector(`.memory-building[data-id="${level.id}"]`).style.opacity = '1';
+  
+  document.getElementById('memory-detail-icon').textContent = level.icon;
+  document.getElementById('memory-detail-title').textContent = level.name;
+  document.getElementById('memory-detail-subtitle').textContent = `${level.size} • ${level.latency}`;
+  document.getElementById('memory-size').textContent = level.size;
+  document.getElementById('memory-latency').textContent = level.latency;
+  document.getElementById('memory-location').textContent = level.location;
+  document.getElementById('memory-type').textContent = level.type;
+  
+  document.getElementById('memory-detail-card').classList.add('active');
+  
+  AudioSystem.playClick();
+  
+  // Animate data packet traveling
+  animateMemoryPacket(level);
+  
+  GameState.exploredComponents['memory'] = Math.max(GameState.exploredComponents['memory'] || 0, memoryLevels.indexOf(level) * 20 + 20);
+  GameState.addXP(100);
+  GameState.save();
+  
+  if (memoryLevels.indexOf(level) === memoryLevels.length - 1) {
+    GameState.completeModule('memory', 1);
+  }
+}
+
+function animateMemoryPacket(targetLevel) {
+  const view = document.getElementById('memory-city-view');
+  const packet = document.createElement('div');
+  packet.className = 'memory-data-packet';
+  packet.textContent = '01';
+  view.appendChild(packet);
+  
+  const startY = 50;
+  const endY = targetLevel.height + 50;
+  
+  packet.style.left = '50%';
+  packet.style.transform = 'translateX(-50%)';
+  packet.style.top = startY + 'px';
+  
+  let progress = 0;
+  const duration = 800;
+  const startTime = performance.now();
+  
+  function animate(currentTime) {
+    progress = (currentTime - startTime) / duration;
+    
+    if (progress < 1) {
+      const y = startY + (endY - startY) * progress;
+      packet.style.top = y + 'px';
+      packet.style.opacity = 1 - progress * 0.5;
+      requestAnimationFrame(animate);
+    } else {
+      packet.remove();
+    }
+  }
+  
+  requestAnimationFrame(animate);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FLOATING POINT EXPLORER
+// ═══════════════════════════════════════════════════════════════════════════
+let floatBits = new Array(32).fill(0);
+
+function initFloatGame() {
+  const expRow = document.getElementById('float-exp-row');
+  const mantissaRow = document.getElementById('float-mantissa-row');
+  
+  expRow.innerHTML = '';
+  mantissaRow.innerHTML = '';
+  
+  // Exponent bits (31-23)
+  for (let i = 30; i >= 23; i--) {
+    const bit = document.createElement('div');
+    bit.className = 'float-bit';
+    bit.dataset.index = i;
+    bit.textContent = '0';
+    bit.addEventListener('click', () => toggleFloatBit(i));
+    expRow.appendChild(bit);
+  }
+  
+  // Mantissa bits (22-0)
+  for (let i = 22; i >= 0; i--) {
+    const bit = document.createElement('div');
+    bit.className = 'float-bit';
+    bit.dataset.index = i;
+    bit.textContent = '0';
+    bit.addEventListener('click', () => toggleFloatBit(i));
+    mantissaRow.appendChild(bit);
+  }
+  
+  updateFloatDisplay();
+}
+
+function toggleFloatBit(index) {
+  floatBits[index] = floatBits[index] === 0 ? 1 : 0;
+  const bitEl = document.querySelector(`.float-bit[data-index="${index}"]`);
+  bitEl.textContent = floatBits[index];
+  bitEl.classList.toggle('active', floatBits[index] === 1);
+  bitEl.classList.toggle('one', floatBits[index] === 1);
+  
+  AudioSystem.playClick();
+  updateFloatDisplay();
+}
+
+function updateFloatDisplay() {
+  // Parse IEEE 754 single precision
+  const sign = floatBits[31];
+  const biasedExp = parseInt(floatBits.slice(23, 31).join(''), 2);
+  const mantissaBits = floatBits.slice(0, 23);
+  
+  const display = document.getElementById('float-number-display');
+  const hexDisplay = document.getElementById('float-hex-display');
+  
+  // Calculate hex
+  const bitsStr = floatBits.join('');
+  const hex = '0x' + parseInt(bitsStr, 2).toString(16).toUpperCase().padStart(8, '0');
+  hexDisplay.textContent = hex;
+  
+  // Calculate actual value
+  let value, isSpecial = false;
+  
+  if (biasedExp === 0) {
+    if (mantissaBits.every(b => b === 0)) {
+      value = sign === 0 ? '+0' : '-0';
+      isSpecial = true;
+    } else {
+      // Denormalized
+      const mantissa = mantissaBits.reduce((acc, b, i) => acc + b * Math.pow(2, -(i + 1)), 0);
+      value = (sign === 0 ? '' : '-') + mantissa.toFixed(6) + ' × 2^-126';
+    }
+  } else if (biasedExp === 255) {
+    if (mantissaBits.some(b => b === 1)) {
+      value = 'NaN';
+      isSpecial = true;
+    } else {
+      value = sign === 0 ? '+∞' : '-∞';
+      isSpecial = true;
+    }
+  } else {
+    const actualExp = biasedExp - 127;
+    const hiddenBit = 1;
+    const mantissa = mantissaBits.reduce((acc, b, i) => acc + b * Math.pow(2, -(i + 1)), 0);
+    const fullMantissa = hiddenBit + mantissa;
+    const floatValue = (sign === 0 ? 1 : -1) * fullMantissa * Math.pow(2, actualExp);
+    value = floatValue.toFixed(6);
+  }
+  
+  display.textContent = value;
+  display.className = 'float-number-display ' + (isSpecial ? 'special' : sign === 0 ? 'positive' : 'negative');
+  
+  // Update component values
+  document.getElementById('float-comp-sign').textContent = sign;
+  document.getElementById('float-comp-exp').textContent = `${biasedExp} (bias: 127)`;
+  document.getElementById('float-comp-actual-exp').textContent = biasedExp === 0 ? '-126 (denorm)' : (biasedExp - 127).toString();
+  
+  const mantissaVal = mantissaBits.reduce((acc, b, i) => acc + b * Math.pow(2, -(i + 1)), 0);
+  document.getElementById('float-comp-mantissa').textContent = biasedExp === 0 ? `0.${Math.round(mantissaVal * 1000000)}` : `1.${Math.round(mantissaVal * 1000000)}`;
+  
+  GameState.exploredComponents['float'] = Math.max(GameState.exploredComponents['float'] || 0, 34);
+  GameState.addXP(5);
+  GameState.save();
+}
+
+function setSpecialFloat(type) {
+  floatBits.fill(0);
+  
+  switch(type) {
+    case 'zero':
+      // Already zeros
+      break;
+    case 'neg-zero':
+      floatBits[31] = 1;
+      break;
+    case 'inf':
+      floatBits.slice(23, 31).fill(1);
+      break;
+    case 'neg-inf':
+      floatBits[31] = 1;
+      floatBits.slice(23, 31).fill(1);
+      break;
+    case 'nan':
+      floatBits.slice(23, 31).fill(1);
+      floatBits[0] = 1;
+      break;
+    case 'one':
+      floatBits[30 - 7] = 1; // exponent = 127
+      break;
+  }
+  
+  document.querySelectorAll('.float-bit').forEach((el, i) => {
+    const idx = parseInt(el.dataset.index);
+    el.textContent = floatBits[idx];
+    el.classList.toggle('active', floatBits[idx] === 1);
+    el.classList.toggle('one', floatBits[idx] === 1);
+  });
+  
+  AudioSystem.playSuccess();
+  updateFloatDisplay();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ALU CIRCUIT BUILDER
+// ═══════════════════════════════════════════════════════════════════════════
+let aluGates = [];
+let aluInputA = 0;
+let aluInputB = 0;
+
+function initALUGame() {
+  const circuitArea = document.getElementById('alu-circuit-area');
+  circuitArea.innerHTML = '';
+  aluGates = [];
+  
+  // Add input nodes
+  createALUComponent('INPUT', 50, 50, 'A');
+  createALUComponent('INPUT', 50, 150, 'B');
+  createALUComponent('OUTPUT', 650, 100, 'Y');
+  
+  // Setup drag and drop
+  document.querySelectorAll('.alu-tool-item').forEach(item => {
+    item.addEventListener('dragstart', handleALUDragStart);
+  });
+  
+  circuitArea.addEventListener('dragover', e => e.preventDefault());
+  circuitArea.addEventListener('drop', handleALUDrop);
+}
+
+function createALUComponent(type, x, y, label = '') {
+  const area = document.getElementById('alu-circuit-area');
+  const comp = document.createElement('div');
+  comp.className = 'alu-component';
+  comp.style.left = x + 'px';
+  comp.style.top = y + 'px';
+  comp.dataset.type = type;
+  comp.dataset.label = label;
+  
+  const gateSymbols = {
+    AND: 'ⅼⅼ',
+    OR: 'ⅼ+',
+    NOT: '¬',
+    NAND: '⊼',
+    NOR: '⊽',
+    XOR: '⊕',
+    INPUT: label,
+    OUTPUT: label,
+    LED: '💡'
+  };
+  
+  comp.innerHTML = `
+    <div class="alu-component-name">${type === 'INPUT' || type === 'OUTPUT' || type === 'LED' ? label : type}</div>
+    <div class="alu-component-pins">
+      <div class="alu-pin" data-pin="in1"></div>
+      <div class="alu-pin" data-pin="in2"></div>
+      <div class="alu-pin" data-pin="out"></div>
+    </div>
+  `;
+  
+  if (type === 'INPUT') {
+    comp.addEventListener('click', () => toggleALUInput(label));
+  }
+  
+  area.appendChild(comp);
+  aluGates.push({ type, x, y, label, el: comp });
+}
+
+function toggleALUInput(label) {
+  if (label === 'A') {
+    aluInputA = aluInputA === 0 ? 1 : 0;
+    const pin = document.querySelector(`.alu-component[data-type="INPUT"][data-label="A"] .alu-pin[data-pin="out"]`);
+    pin.classList.toggle('active', aluInputA === 1);
+  } else {
+    aluInputB = aluInputB === 0 ? 1 : 0;
+    const pin = document.querySelector(`.alu-component[data-type="INPUT"][data-label="B"] .alu-pin[data-pin="out"]`);
+    pin.classList.toggle('active', aluInputB === 1);
+  }
+  
+  AudioSystem.playClick();
+  updateTruthTable();
+}
+
+function updateTruthTable() {
+  const rows = document.querySelectorAll('#alu-truth-table tbody tr');
+  const outputs = [
+    [0, 0],
+    [0, 1],
+    [1, 0],
+    [1, 1]
+  ];
+  
+  rows.forEach((row, i) => {
+    const outCell = row.querySelector('.output');
+    const a = outputs[i][0];
+    const b = outputs[i][1];
+    
+    // Simple AND gate simulation
+    const result = a & b;
+    outCell.textContent = result;
+    outCell.style.color = result ? '#00ff88' : '#4a6a8a';
+  });
+}
+
+let draggedGate = null;
+
+function handleALUDragStart(e) {
+  draggedGate = e.target.closest('.alu-tool-item').dataset.gate;
+}
+
+function handleALUDrop(e) {
+  e.preventDefault();
+  const area = document.getElementById('alu-circuit-area');
+  const rect = area.getBoundingClientRect();
+  const x = e.clientX - rect.left - 50;
+  const y = e.clientY - rect.top - 25;
+  
+  if (draggedGate && draggedGate !== 'INPUT' && draggedGate !== 'OUTPUT' && draggedGate !== 'LED') {
+    createALUComponent(draggedGate, Math.max(50, Math.min(x, 550)), Math.max(30, Math.min(y, 350)));
+    AudioSystem.playClick();
+  }
+  
+  draggedGate = null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BOOTH MULTIPLICATION VISUALIZER
+// ═══════════════════════════════════════════════════════════════════════════
+let boothState = {
+  multiplicand: 7,
+  multiplier: 3,
+  AC: 0,
+  QR: 0,
+  Qn1: 0,
+  SC: 0,
+  steps: [],
+  currentStep: 0,
+  running: false,
+  autoInterval: null
+};
+
+function initBoothGame() {
+  const mcInput = document.getElementById('booth-multiplicand');
+  const mInput = document.getElementById('booth-multiplier');
+  
+  mcInput.addEventListener('input', () => {
+    boothState.multiplicand = parseInt(mcInput.value) || 0;
+    updateBoothBinary();
+    boothReset();
+  });
+  
+  mInput.addEventListener('input', () => {
+    boothState.multiplier = parseInt(mInput.value) || 0;
+    updateBoothBinary();
+    boothReset();
+  });
+  
+  updateBoothBinary();
+  boothReset();
+}
+
+function updateBoothBinary() {
+  const mc = boothState.multiplicand;
+  const m = boothState.multiplier;
+  
+  document.getElementById('booth-multiplicand-bin').textContent = toSignedBin(mc, 5);
+  document.getElementById('booth-multiplier-bin').textContent = toSignedBin(m, 5);
+}
+
+function toSignedBin(num, bits) {
+  const min = -Math.pow(2, bits - 1);
+  const max = Math.pow(2, bits - 1) - 1;
+  num = Math.max(min, Math.min(max, num));
+  
+  if (num < 0) {
+    num = Math.pow(2, bits) + num;
+  }
+  return num.toString(2).padStart(bits, '0');
+}
+
+function toSigned(num, bits) {
+  const mask = Math.pow(2, bits);
+  num = num & (mask - 1);
+  if (num >= Math.pow(2, bits - 1)) {
+    num -= mask;
+  }
+  return num;
+}
+
+function boothReset() {
+  if (boothState.autoInterval) {
+    clearInterval(boothState.autoInterval);
+    boothState.autoInterval = null;
+  }
+  
+  boothState.AC = 0;
+  boothState.QR = boothState.multiplier & 0x1F;
+  boothState.Qn1 = 0;
+  boothState.SC = 5;
+  boothState.steps = [];
+  boothState.currentStep = 0;
+  boothState.running = false;
+  
+  document.getElementById('booth-start-btn').disabled = false;
+  document.getElementById('booth-step-btn').disabled = false;
+  document.getElementById('booth-auto-btn').textContent = 'Auto';
+  
+  generateBoothSteps();
+  updateBoothDisplay();
+  document.getElementById('booth-log-entries').innerHTML = '';
+}
+
+function generateBoothSteps() {
+  const BR = boothState.multiplicand & 0x1F;
+  const Q = boothState.multiplier & 0x1F;
+  boothState.steps = [];
+  
+  let AC = 0;
+  let QR = Q;
+  let Qn1 = 0;
+  let SC = 5;
+  
+  boothState.steps.push({
+    AC: AC,
+    QR: QR,
+    Qn1: Qn1,
+    SC: SC,
+    action: 'Initialize',
+    highlight: []
+  });
+  
+  while (SC > 0) {
+    const Q0 = QR & 1;
+    const prevQ0 = Qn1;
+    
+    if ((Q0 === 1 && prevQ0 === 0)) {
+      // Add
+      AC = (AC + BR) & 0x1F;
+      boothState.steps.push({
+        AC: AC,
+        QR: QR,
+        Qn1: Qn1,
+        SC: SC,
+        action: 'AC = AC + BR (Add)',
+        highlight: ['AC'],
+        highlightType: 'add'
+      });
+    } else if ((Q0 === 0 && prevQ0 === 1)) {
+      // Subtract
+      const BR2comp = (~BR + 1) & 0x1F;
+      AC = (AC + BR2comp) & 0x1F;
+      boothState.steps.push({
+        AC: AC,
+        QR: QR,
+        Qn1: Qn1,
+        SC: SC,
+        action: 'AC = AC + BR\'' + ' + 1 (Subtract)',
+        highlight: ['AC'],
+        highlightType: 'sub'
+      });
+    } else {
+      boothState.steps.push({
+        AC: AC,
+        QR: QR,
+        Qn1: Qn1,
+        SC: SC,
+        action: 'No operation',
+        highlight: [],
+        highlightType: null
+      });
+    }
+    
+    // Arithmetic Shift Right
+    const signBit = AC & 0x10;
+    AC = (AC >> 1) | signBit;
+    QR = (QR >> 1) | ((AC & 1) << 4);
+    AC = (AC & 0x1F) | signBit;
+    Qn1 = QR & 1;
+    QR = QR & 0x1F;
+    
+    SC--;
+    
+    boothState.steps.push({
+      AC: AC,
+      QR: QR,
+      Qn1: Qn1,
+      SC: SC,
+      action: 'ASHR (Arithmetic Shift Right)',
+      highlight: ['AC', 'QR'],
+      highlightType: 'shift'
+    });
+  }
+}
+
+function boothStart() {
+  boothState.running = true;
+  document.getElementById('booth-start-btn').disabled = true;
+  document.getElementById('booth-step-btn').disabled = true;
+  
+  while (boothState.currentStep < boothState.steps.length) {
+    boothStep();
+  }
+}
+
+function boothStep() {
+  if (boothState.currentStep >= boothState.steps.length) {
+    if (boothState.autoInterval) {
+      clearInterval(boothState.autoInterval);
+      boothState.autoInterval = null;
+    }
+    return;
+  }
+  
+  const step = boothState.steps[boothState.currentStep];
+  boothState.AC = step.AC;
+  boothState.QR = step.QR;
+  boothState.Qn1 = step.Qn1;
+  boothState.SC = step.SC;
+  
+  updateBoothDisplay(step);
+  addBoothLogEntry(step);
+  
+  boothState.currentStep++;
+  
+  document.getElementById('booth-step-num').textContent = boothState.currentStep;
+  document.getElementById('booth-step-total').textContent = boothState.steps.length;
+  document.getElementById('booth-sc-value').textContent = boothState.SC;
+  
+  if (boothState.currentStep >= boothState.steps.length) {
+    // Show final result
+    const result = (boothState.AC << 5) | boothState.QR;
+    const signedResult = toSigned(result, 10);
+    showNotification('Multiplication Complete', `${boothState.multiplicand} × ${boothState.multiplier} = ${signedResult}`, 'success');
+    
+    GameState.completeModule('booth', 1);
+    GameState.addXP(200);
+  }
+}
+
+function boothAuto() {
+  const btn = document.getElementById('booth-auto-btn');
+  
+  if (boothState.autoInterval) {
+    clearInterval(boothState.autoInterval);
+    boothState.autoInterval = null;
+    btn.textContent = 'Auto';
+  } else {
+    boothState.autoInterval = setInterval(boothStep, 800);
+    btn.textContent = 'Stop';
+  }
+}
+
+function updateBoothDisplay(highlightStep = null) {
+  const container = document.getElementById('booth-registers');
+  container.innerHTML = `
+    <div class="booth-register">
+      <span class="booth-register-label">AC (Accumulator)</span>
+      <div class="booth-register-bits">
+        ${toSignedBin(boothState.AC, 5).split('').map((b, i) => 
+          `<div class="booth-bit ${highlightStep?.highlight.includes('AC') ? 'highlight-' + highlightStep.highlightType : ''}">${b}</div>`
+        ).join('')}
+      </div>
+    </div>
+    <div class="booth-register">
+      <span class="booth-register-label">QR (Multiplier)</span>
+      <div class="booth-register-bits">
+        ${toSignedBin(boothState.QR, 5).split('').map((b, i) => 
+          `<div class="booth-bit ${highlightStep?.highlight.includes('QR') ? 'highlight-' + highlightStep.highlightType : ''}">${b}</div>`
+        ).join('')}
+      </div>
+    </div>
+    <div class="booth-register">
+      <span class="booth-register-label">Qₙ₊₁</span>
+      <div class="booth-register-bits">
+        <div class="booth-bit booth-extra-bit ${highlightStep?.highlightType === 'add' || highlightStep?.highlightType === 'sub' ? 'highlight-' + highlightStep.highlightType : ''}">${boothState.Qn1}</div>
+      </div>
+    </div>
+  `;
+}
+
+function addBoothLogEntry(step) {
+  const log = document.getElementById('booth-log-entries');
+  const entry = document.createElement('div');
+  entry.className = 'booth-log-entry';
+  
+  const stepNum = boothState.steps.indexOf(step) + 1;
+  const actionClass = step.highlightType === 'add' ? 'subtract' : step.highlightType === 'sub' ? 'subtract' : step.highlightType === 'shift' ? 'shift' : '';
+  
+  entry.innerHTML = `
+    <span class="booth-log-step">${stepNum}</span>
+    <span class="booth-log-action ${actionClass}">${step.action}</span>
+  `;
+  
+  log.appendChild(entry);
+  log.scrollTop = log.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FETCH-EXECUTE CYCLE ANIMATOR
+// ═══════════════════════════════════════════════════════════════════════════
+const fetchComponents = [
+  { id: 'ram', label: 'Memory', sublabel: 'RAM', x: 50, y: 200, w: 100, h: 80 },
+  { id: 'mar', label: 'MAR', sublabel: 'Address', x: 200, y: 100, w: 80, h: 60 },
+  { id: 'mdr', label: 'MDR', sublabel: 'Data', x: 200, y: 280, w: 80, h: 60 },
+  { id: 'ir', label: 'IR', sublabel: 'Instruction', x: 350, y: 100, w: 80, h: 60 },
+  { id: 'decoder', label: 'Decoder', sublabel: 'Control', x: 450, y: 100, w: 80, h: 60 },
+  { id: 'cu', label: 'Control', sublabel: 'Unit', x: 450, y: 200, w: 100, h: 80 },
+  { id: 'alu', label: 'ALU', sublabel: 'Execute', x: 350, y: 280, w: 80, h: 60 },
+  { id: 'regs', label: 'Registers', sublabel: 'Data', x: 550, y: 280, w: 100, h: 80 },
+  { id: 'pc', label: 'PC', sublabel: 'Counter', x: 200, y: 380, w: 80, h: 60 }
+];
+
+let fetchStage = 'fetch';
+let fetchRunning = false;
+let fetchInterval = null;
+let fetchSpeed = 1;
+
+function initFetchGame() {
+  const sim = document.getElementById('fetch-simulation');
+  
+  // Clear existing components
+  sim.querySelectorAll('.fetch-component, .fetch-data-packet, .fetch-bus-line').forEach(el => el.remove());
+  
+  // Add components
+  fetchComponents.forEach(comp => {
+    const div = document.createElement('div');
+    div.className = 'fetch-component';
+    div.id = `fetch-${comp.id}`;
+    div.style.left = comp.x + 'px';
+    div.style.top = comp.y + 'px';
+    div.style.width = comp.w + 'px';
+    div.style.height = comp.h + 'px';
+    div.innerHTML = `
+      <div class="fetch-component-label">${comp.label}</div>
+      <div class="fetch-component-sublabel">${comp.sublabel}</div>
+    `;
+    sim.appendChild(div);
+  });
+  
+  fetchReset();
+}
+
+function fetchSetStage(stage) {
+  fetchStage = stage;
+  document.querySelectorAll('.fetch-stage-card').forEach(card => {
+    card.classList.toggle('active', card.dataset.stage === stage);
+  });
+  animateFetchStage();
+}
+
+function animateFetchStage() {
+  document.querySelectorAll('.fetch-component').forEach(el => el.classList.remove('active'));
+  
+  const activeComponents = {
+    fetch: ['ram', 'mar', 'mdr', 'pc'],
+    decode: ['ir', 'decoder'],
+    execute: ['cu', 'alu'],
+    store: ['regs', 'alu', 'ram']
+  };
+  
+  activeComponents[fetchStage].forEach(id => {
+    document.getElementById(`fetch-${id}`).classList.add('active');
+  });
+  
+  // Animate data packet
+  animateFetchPacket(fetchStage);
+  
+  AudioSystem.playTone(400 + Math.random() * 200, 0.1);
+}
+
+function animateFetchPacket(stage) {
+  const sim = document.getElementById('fetch-simulation');
+  const packet = document.createElement('div');
+  packet.className = 'fetch-data-packet';
+  packet.textContent = stage[0].toUpperCase();
+  sim.appendChild(packet);
+  
+  const paths = {
+    fetch: [{ x: 100, y: 240 }, { x: 240, y: 130 }, { x: 280, y: 130 }, { x: 280, y: 130 }],
+    decode: [{ x: 390, y: 130 }, { x: 490, y: 130 }],
+    execute: [{ x: 490, y: 240 }, { x: 390, y: 310 }],
+    store: [{ x: 390, y: 310 }, { x: 600, y: 320 }, { x: 100, y: 320 }]
+  };
+  
+  const path = paths[stage];
+  let pathIndex = 0;
+  let progress = 0;
+  
+  packet.style.left = path[0].x + 'px';
+  packet.style.top = path[0].y + 'px';
+  
+  function animate() {
+    if (pathIndex < path.length - 1) {
+      const start = path[pathIndex];
+      const end = path[pathIndex + 1];
+      
+      progress += 0.02 * fetchSpeed;
+      
+      if (progress >= 1) {
+        progress = 0;
+        pathIndex++;
+      }
+      
+      if (pathIndex < path.length - 1) {
+        const x = start.x + (end.x - start.x) * progress;
+        const y = start.y + (end.y - start.y) * progress;
+        packet.style.left = x + 'px';
+        packet.style.top = y + 'px';
+        requestAnimationFrame(animate);
+      } else {
+        packet.remove();
+      }
+    } else {
+      setTimeout(() => packet.remove(), 500);
+    }
+  }
+  
+  animate();
+}
+
+function fetchPlay() {
+  fetchRunning = true;
+  document.getElementById('fetch-play-btn').classList.add('active');
+  document.getElementById('fetch-pause-btn').classList.remove('active');
+  
+  const stages = ['fetch', 'decode', 'execute', 'store'];
+  let stageIndex = 0;
+  
+  fetchInterval = setInterval(() => {
+    if (stageIndex < stages.length) {
+      fetchSetStage(stages[stageIndex]);
+      stageIndex++;
+    } else {
+      stageIndex = 0;
+    }
+  }, 2000 / fetchSpeed);
+}
+
+function fetchPause() {
+  fetchRunning = false;
+  clearInterval(fetchInterval);
+  document.getElementById('fetch-play-btn').classList.remove('active');
+  document.getElementById('fetch-pause-btn').classList.add('active');
+}
+
+function fetchStep() {
+  const stages = ['fetch', 'decode', 'execute', 'store'];
+  const currentIndex = stages.indexOf(fetchStage);
+  const nextIndex = (currentIndex + 1) % stages.length;
+  fetchSetStage(stages[nextIndex]);
+}
+
+function fetchSlow() {
+  fetchSpeed = 0.5;
+}
+
+function fetchFast() {
+  fetchSpeed = 3;
+  if (fetchRunning) {
+    fetchPause();
+    fetchPlay();
+  }
+}
+
+function fetchReset() {
+  fetchPause();
+  fetchStage = 'fetch';
+  fetchSpeed = 1;
+  fetchSetStage('fetch');
+  document.getElementById('fetch-clock-val').textContent = '0';
+}
+
+function animateFetchCycle() {
+  // Continuous clock animation
+  let clockVal = 0;
+  setInterval(() => {
+    if (fetchRunning) {
+      clockVal += 100 * fetchSpeed;
+      document.getElementById('fetch-clock-val').textContent = clockVal;
+    }
+  }, 100);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INSTRUCTION SET CARD GAME
+// ═══════════════════════════════════════════════════════════════════════════
+const instructions = [
+  { mnemonic: 'MOV', operands: ['AX, BX', 'AX, 5', 'MEM, AX'], desc: 'Move data' },
+  { mnemonic: 'ADD', operands: ['AX, BX', 'AX, 5'], desc: 'Add values' },
+  { mnemonic: 'SUB', operands: ['AX, BX', 'AX, 5'], desc: 'Subtract' },
+  { mnemonic: 'MUL', operands: ['BX', 'AX'], desc: 'Multiply' },
+  { mnemonic: 'CMP', operands: ['AX, BX', 'AX, 5'], desc: 'Compare' },
+  { mnemonic: 'JMP', operands: ['LABEL', 'LOOP'], desc: 'Jump' },
+  { mnemonic: 'AND', operands: ['AX, BX'], desc: 'Logical AND' },
+  { mnemonic: 'OR', operands: ['AX, BX'], desc: 'Logical OR' },
+  { mnemonic: 'NOT', operands: ['AX'], desc: 'Logical NOT' },
+  { mnemonic: 'NOP', operands: [], desc: 'No operation' }
+];
+
+const registers = ['AX', 'BX', 'CX', 'DX', 'SP', 'BP', 'SI', 'DI'];
+const registerValues = { AX: 0, BX: 0, CX: 0, DX: 0, SP: 0, BP: 0, SI: 0, DI: 0 };
+
+let droppedCards = [];
+let draggedCard = null;
+
+function initInstrGame() {
+  const palette = document.getElementById('instr-palette-cards');
+  palette.innerHTML = '';
+  
+  instructions.forEach(instr => {
+    instr.operands.forEach(operand => {
+      const card = document.createElement('div');
+      card.className = 'instr-mini-card';
+      card.draggable = true;
+      card.dataset.mnemonic = instr.mnemonic;
+      card.dataset.operand = operand;
+      card.dataset.desc = instr.desc;
+      card.innerHTML = `${instr.mnemonic} ${operand}`;
+      
+      card.addEventListener('dragstart', handleInstrDragStart);
+      palette.appendChild(card);
+    });
+  });
+  
+  const regDisplay = document.getElementById('instr-register-display');
+  regDisplay.innerHTML = '';
+  
+  registers.forEach(reg => {
+    const div = document.createElement('div');
+    div.className = 'instr-register';
+    div.id = `reg-${reg}`;
+    div.innerHTML = `
+      <div class="instr-reg-name">${reg}</div>
+      <div class="instr-reg-value" id="regval-${reg}">0</div>
+    `;
+    regDisplay.appendChild(div);
+  });
+  
+  const dropZone = document.getElementById('instr-drop-zone');
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', handleInstrDrop);
+}
+
+function handleInstrDragStart(e) {
+  draggedCard = {
+    mnemonic: e.target.dataset.mnemonic,
+    operand: e.target.dataset.operand,
+    desc: e.target.dataset.desc
+  };
+  e.target.classList.add('dragging');
+}
+
+function handleInstrDrop(e) {
+  e.preventDefault();
+  const dropZone = document.getElementById('instr-drop-zone');
+  dropZone.classList.remove('drag-over');
+  
+  if (draggedCard) {
+    const card = document.createElement('div');
+    card.className = 'instr-card mnemonic';
+    card.innerHTML = `
+      <div class="instr-card-hex">${generateHex()}</div>
+      <div class="instr-card-mnemonic">${draggedCard.mnemonic}</div>
+      <div class="instr-card-desc">${draggedCard.operand}</div>
+    `;
+    card.dataset.mnemonic = draggedCard.mnemonic;
+    card.dataset.operand = draggedCard.operand;
+    
+    dropZone.appendChild(card);
+    droppedCards.push(draggedCard);
+    
+    AudioSystem.playClick();
+    document.getElementById('instr-execute-btn').disabled = false;
+    
+    draggedCard = null;
+  }
+}
+
+function generateHex() {
+  return Math.floor(Math.random() * 256).toString(16).toUpperCase().padStart(2, '0') + ' XX';
+}
+
+function instrExecute() {
+  // Simulate instruction execution
+  droppedCards.forEach((card, i) => {
+    setTimeout(() => {
+      simulateInstruction(card.mnemonic, card.operand);
+      AudioSystem.playTone(600 + i * 100, 0.1);
+    }, i * 300);
+  });
+  
+  setTimeout(() => {
+    showNotification('Execution Complete', 'Program executed successfully', 'success');
+    GameState.completeModule('instr', 1);
+    GameState.addXP(150);
+  }, droppedCards.length * 300 + 200);
+}
+
+function simulateInstruction(mnemonic, operand) {
+  const parts = operand.split(',').map(s => s.trim());
+  const dest = parts[0];
+  const src = parts[1];
+  
+  switch(mnemonic) {
+    case 'MOV':
+      if (src && registerValues.hasOwnProperty(src)) {
+        registerValues[dest] = registerValues[src];
+      } else if (src) {
+        registerValues[dest] = parseInt(src) || 0;
+      }
+      break;
+    case 'ADD':
+      if (src && registerValues.hasOwnProperty(src)) {
+        registerValues[dest] = (registerValues[dest] || 0) + registerValues[src];
+      } else if (src) {
+        registerValues[dest] = (registerValues[dest] || 0) + (parseInt(src) || 0);
+      }
+      break;
+    case 'SUB':
+      if (src && registerValues.hasOwnProperty(src)) {
+        registerValues[dest] = (registerValues[dest] || 0) - registerValues[src];
+      } else if (src) {
+        registerValues[dest] = (registerValues[dest] || 0) - (parseInt(src) || 0);
+      }
+      break;
+  }
+  
+  updateRegisterDisplay();
+}
+
+function updateRegisterDisplay() {
+  registers.forEach(reg => {
+    document.getElementById(`regval-${reg}`).textContent = registerValues[reg];
+  });
+}
+
+function instrClear() {
+  const dropZone = document.getElementById('instr-drop-zone');
+  dropZone.innerHTML = '';
+  droppedCards = [];
+  registerValues.AX = 0;
+  registerValues.BX = 0;
+  registerValues.CX = 0;
+  registerValues.DX = 0;
+  updateRegisterDisplay();
+  document.getElementById('instr-execute-btn').disabled = true;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SKILL TREE
+// ═══════════════════════════════════════════════════════════════════════════
+const skills = [
+  { id: 'basics', icon: '🔰', title: 'Digital Foundations', desc: 'Understand binary, gates, and basic logic', prereq: null, xp: 0 },
+  { id: 'cpu', icon: '🔲', title: 'CPU Architecture', desc: 'Master control units and registers', prereq: 'basics', xp: 500 },
+  { id: 'bus', icon: '⚡', title: 'Bus Systems', desc: 'Learn data, address, and control buses', prereq: 'basics', xp: 400 },
+  { id: 'memory', icon: '🏙️', title: 'Memory Hierarchy', desc: 'Navigate registers to storage', prereq: 'cpu', xp: 600 },
+  { id: 'float', icon: '🔢', title: 'Floating Point', desc: 'Conquer IEEE 754 representation', prereq: 'memory', xp: 550 },
+  { id: 'alu', icon: '⚙️', title: 'ALU Design', desc: 'Build logic gate circuits', prereq: 'bus', xp: 450 },
+  { id: 'booth', icon: '✖️', title: "Booth's Algorithm", desc: 'Efficient signed multiplication', prereq: 'alu', xp: 700 },
+  { id: 'fetch', icon: '🔄', title: 'Fetch-Execute Cycle', desc: 'Instruction pipeline mastery', prereq: 'cpu', xp: 650 },
+  { id: 'master', icon: '👑', title: 'Architecture Master', desc: 'Complete all modules', prereq: 'booth', xp: 1000 }
+];
+
+function initSkillTree() {
+  const grid = document.getElementById('skill-tree-grid');
+  grid.innerHTML = '';
+  
+  skills.forEach(skill => {
+    const unlocked = GameState.completedModules.includes(skill.id) || 
+                     (GameState.xp >= skill.xp && (!skill.prereq || GameState.completedModules.includes(skill.prereq)));
+    
+    const div = document.createElement('div');
+    div.className = `skill-node ${unlocked ? 'unlocked' : 'locked'}`;
+    div.innerHTML = `
+      <div class="skill-node-icon">${skill.icon}</div>
+      <h3 class="skill-node-title">${skill.title}</h3>
+      <p class="skill-node-desc">${skill.desc}</p>
+      ${skill.prereq ? `<span class="skill-node-prereq">Requires: ${skills.find(s => s.id === skill.prereq)?.title}</span>` : ''}
+      <div class="skill-node-xp">⭐ ${skill.xp} XP</div>
+    `;
+    
+    grid.appendChild(div);
+  });
+}
+
+function toggleSkillTree() {
+  const overlay = document.getElementById('skill-tree-overlay');
+  overlay.classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MISSION PANEL
+// ═══════════════════════════════════════════════════════════════════════════
+function toggleMissionPanel() {
+  const panel = document.getElementById('mission-panel');
+  panel.classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SOUND TOGGLE
+// ═══════════════════════════════════════════════════════════════════════════
+function toggleSound() {
+  GameState.soundEnabled = !GameState.soundEnabled;
+  const btn = document.getElementById('sound-btn');
+  btn.style.color = GameState.soundEnabled ? 'var(--neon-cyan)' : 'var(--text-secondary)';
+  GameState.save();
+  
+  if (GameState.soundEnabled) {
+    AudioSystem.init();
+    AudioSystem.playClick();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INITIALIZATION
+// ═══════════════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  initBackgroundAnimation();
+  runBootSequence();
+  
+  // Initialize all games (hidden until boot complete)
+  setTimeout(() => {
+    initCPUGame();
+    initBusGame();
+    initMemoryGame();
+    initFloatGame();
+    initALUGame();
+    initBoothGame();
+    initFetchGame();
+    initInstrGame();
+    initSkillTree();
+  }, 100);
+});
+
+// Keyboard navigation
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    toggleSkillTree();
+    document.getElementById('mission-panel').classList.remove('open');
+  }
+});
+</script>
+</body>
+</html>
